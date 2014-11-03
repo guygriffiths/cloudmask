@@ -62,7 +62,7 @@ public class ZoomableImageView extends ImageView {
     /** The height in pixels of the {@link ImageView} widget */
     private final int height;
     /** The {@link ImageGenerator} which will be used to generate images */
-    private final ImageGenerator imageGenerator;
+    protected final ImageGenerator imageGenerator;
 
     /*
      * Store the co-ordinate of the last drag point so that image can be updated
@@ -190,9 +190,9 @@ public class ZoomableImageView extends ImageView {
                  * Adjust zoom by a constant factor per scroll wheel click
                  */
                 if (event.getDeltaY() > 0) {
-                    doZoom(1.1, event.getX(), event.getY());
+                    doPixelZoom(1.1, event.getX(), event.getY());
                 } else {
-                    doZoom(1 / 1.1, event.getX(), event.getY());
+                    doPixelZoom(1 / 1.1, event.getX(), event.getY());
                 }
 
                 /*
@@ -227,7 +227,7 @@ public class ZoomableImageView extends ImageView {
                     double offsetY = (event.getY() - lastDragY);
                     lastDragX = event.getX();
                     lastDragY = event.getY();
-                    doDrag(offsetX, offsetY);
+                    doPixelDrag(offsetX, offsetY);
                     updateImageQuick();
                 }
             }
@@ -253,12 +253,36 @@ public class ZoomableImageView extends ImageView {
      * @param factor
      *            The factor to zoom by. Values greater than one represent a
      *            zoom in, and values between 0 and 1 represent a zoom out
+     * @param pixelCentreX
+     *            The x co-ordinate of the centre of the zoom in pixels relative
+     *            to the viewport
+     * @param pixelCentreY
+     *            The y co-ordinate of the centre of the zoom in pixels relative
+     *            to the viewport
+     */
+    private void doPixelZoom(double factor, double pixelCentreX, double pixelCentreY) {
+        /*
+         * The centre of the zoom in co-ordinate space
+         */
+        double coordCentreX = minX + (pixelCentreX / width) * (maxX - minX);
+        double coordCentreY = minY + (pixelCentreY / height) * (maxY - minY);
+        doZoom(factor, coordCentreX, coordCentreY);
+    }
+
+    /**
+     * Updates appropriate variables to represent a zoom. Does not update the
+     * image, just sets new limits
+     * 
+     * @param factor
+     *            The factor to zoom by. Values greater than one represent a
+     *            zoom in, and values between 0 and 1 represent a zoom out
      * @param centreX
      *            The x co-ordinate of the centre of the zoom
      * @param centreY
      *            The y co-ordinate of the centre of the zoom
      */
     protected void doZoom(double factor, double centreX, double centreY) {
+        System.out.println("zooming with factor "+factor);
         /*
          * Convenient values
          */
@@ -272,26 +296,20 @@ public class ZoomableImageView extends ImageView {
         double finalWidthY = widthY / factor;
 
         /*
-         * The centre of the zoom in co-ordinate space
-         */
-        double coordCentreX = minX + (centreX / width) * widthX;
-        double coordCentreY = minY + (centreY / height) * widthY;
-
-        /*
          * How much to shift each side (min/max) by (relatively)
          */
-        double minXShiftFactor = (coordCentreX - minX) / widthX;
-        double maxXShiftFactor = (maxX - coordCentreX) / widthX;
-        double minYShiftFactor = (coordCentreY - minY) / widthY;
-        double maxYShiftFactor = (maxY - coordCentreY) / widthY;
+        double minXShiftFactor = (centreX - minX) / widthX;
+        double maxXShiftFactor = (maxX - centreX) / widthX;
+        double minYShiftFactor = (centreY - minY) / widthY;
+        double maxYShiftFactor = (maxY - centreY) / widthY;
 
         /*
          * Now adjust the co-ordinates
          */
-        minX = coordCentreX - finalWidthX * minXShiftFactor;
-        maxX = coordCentreX + finalWidthX * maxXShiftFactor;
-        minY = coordCentreY - finalWidthY * minYShiftFactor;
-        maxY = coordCentreY + finalWidthY * maxYShiftFactor;
+        minX = centreX - finalWidthX * minXShiftFactor;
+        maxX = centreX + finalWidthX * maxXShiftFactor;
+        minY = centreY - finalWidthY * minYShiftFactor;
+        maxY = centreY + finalWidthY * maxYShiftFactor;
 
         /*
          * Check if the zoom goes far enough out that the view goes outside the
@@ -355,23 +373,35 @@ public class ZoomableImageView extends ImageView {
         });
         new Thread(regenerationTask).start();
     }
-
+    
     /**
      * Updates appropriate variables to represent a drag. Does not update the
      * image, just sets new limits
      * 
      * @param xPixels
-     *            the number pixels dragged in the x-direction
+     *            the number of pixels dragged in the x-direction
      * @param yPixels
-     *            the number pixels dragged in the y-direction
+     *            the number of pixels dragged in the y-direction
      */
-    private void doDrag(double xPixels, double yPixels) {
+    private void doPixelDrag(double xPixels, double yPixels) {
         /*
          * The amount the co-ordinates have changed
          */
         double coordsChangeX = xPixels * (maxX - minX) / width;
         double coordsChangeY = yPixels * (maxY - minY) / height;
+        doDrag(coordsChangeX, coordsChangeY);
+    }
 
+    /**
+     * Updates appropriate variables to represent a drag. Does not update the
+     * image, just sets new limits
+     * 
+     * @param coordsChangeX
+     *            the amount to change the x co-ordinate by
+     * @param coordsChangeY
+     *            the amount to change the y co-ordinate by
+     */
+    protected void doDrag(double coordsChangeX, double coordsChangeY) {
         if (minX - coordsChangeX < minXBound) {
             coordsChangeX = minX - minXBound;
         }
@@ -395,7 +425,7 @@ public class ZoomableImageView extends ImageView {
      * is quick, but zoom artifacts will be present, and if dragged beyond the
      * border there will be missing data
      */
-    private void updateImageQuick() {
+    protected void updateImageQuick() {
         /*
          * Update the offsets
          */
@@ -413,7 +443,7 @@ public class ZoomableImageView extends ImageView {
      * The new image will have a border up to the size of the image on all sides
      * to allow for dragging
      */
-    private void updateImage() {
+    protected void updateImage() {
         /*
          * Generate an image with a border around it to allow for smooth panning
          */
@@ -444,7 +474,8 @@ public class ZoomableImageView extends ImageView {
         currentImageWidth = (int) (width * (maxXBorder - minXBorder) / (maxX - minX));
         currentImageHeight = (int) (height * (maxYBorder - minYBorder) / (maxY - minY));
         /*
-         * Generate a new BufferedImage and convert it to a WritableImage for display.
+         * Generate a new BufferedImage and convert it to a WritableImage for
+         * display.
          */
         WritableImage fxImage = SwingFXUtils.toFXImage(imageGenerator.generateImage(minXBorder,
                 minYBorder, maxXBorder, maxYBorder, currentImageWidth, currentImageHeight), null);

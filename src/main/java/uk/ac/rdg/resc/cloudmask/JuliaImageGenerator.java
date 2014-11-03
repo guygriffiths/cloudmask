@@ -28,40 +28,69 @@
 
 package uk.ac.rdg.resc.cloudmask;
 
-import javafx.application.Application;
-import javafx.scene.Scene;
-import javafx.scene.image.ImageView;
-import javafx.scene.layout.GridPane;
-import javafx.stage.Stage;
+import java.awt.image.BufferedImage;
 
-public class CloudMask extends Application {
+import uk.ac.rdg.resc.cloudmask.ZoomableImageView.ImageGenerator;
+import uk.ac.rdg.resc.edal.graphics.style.util.ColourPalette;
 
-    public static void main(String[] args) {
-        launch(args);
+public class JuliaImageGenerator implements ImageGenerator {
+    
+    private ColourPalette palette;
+
+    public JuliaImageGenerator() {
+        this("default");
     }
     
-    double offsetX = 0;
-    double offsetY = 0;
-    double zoom = 1.0;
+    public JuliaImageGenerator(String paletteName) {
+        palette = ColourPalette.fromString(paletteName, 250);
+    }
+    
+    @Override
+    public BufferedImage generateImage(double minX, double minY, double maxX, double maxY,
+            int width, int height) {
+        BufferedImage image = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
+        
+        double mux = 0.36237;
+        double muy = 0.32;
+        
+        for(int i=0;i<width; i++) {
+            double x = minX + i*(maxX-minX)/width;
+            for(int j=0;j<height; j++) {
+                double y = minY + j*(maxY-minY)/height;
+                int iterations = 0;
+                double xp = x;
+                double yp = y;
+                while( xp * xp + yp * yp < 4 && iterations < 250) {
+                    double xtemp = xp*xp - yp*yp + mux;
+                    yp = 2 * xp*yp + muy;
+                    xp = xtemp;
+                    iterations++;
+                }
+                image.setRGB(i, j, palette.getColor((float) (iterations / 250.0)).getRGB());
+            }
+        }
+        
+        return image;
+    }
 
     @Override
-    public void start(Stage primaryStage) throws Exception {
-        primaryStage.setTitle("Cloud Masker");
-
-        GridPane grid = new GridPane();
-        
-        LinkedZoomableImageView mandelView = new LinkedZoomableImageView(400, 400, new MandelbrotImageGenerator());
-        LinkedZoomableImageView mandelView2 = new LinkedZoomableImageView(300, 300, new MandelbrotImageGenerator("div-PiYG"));
-        LinkedZoomableImageView juliaView = new LinkedZoomableImageView(400, 400, new JuliaImageGenerator());
-        
-        mandelView.addLinkedView(juliaView);
-        mandelView.addLinkedView(mandelView2);
-        
-        grid.add(mandelView, 0, 0);
-        grid.add(mandelView2, 0, 1);
-        grid.add(juliaView, 1, 0);
-
-        primaryStage.setScene(new Scene(grid, 300, 250));
-        primaryStage.show();
+    public double getMinValidX() {
+        return -2;
     }
+
+    @Override
+    public double getMaxValidX() {
+        return 2;
+    }
+
+    @Override
+    public double getMinValidY() {
+        return -2;
+    }
+
+    @Override
+    public double getMaxValidY() {
+        return 2;
+    }
+
 }
