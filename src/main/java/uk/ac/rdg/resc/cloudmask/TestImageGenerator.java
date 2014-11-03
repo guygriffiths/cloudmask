@@ -35,17 +35,14 @@ import java.awt.image.BufferedImage;
 import uk.ac.rdg.resc.cloudmask.ZoomableImageView.ImageGenerator;
 
 public class TestImageGenerator implements ImageGenerator {
-
-    private int count = 0;
     @Override
     public BufferedImage generateImage(double minX, double minY, double maxX, double maxY,
             int width, int height) {
-//        try {
-//            Thread.sleep(100L);
-//        } catch (InterruptedException e) {
-//            // TODO Auto-generated catch block
-//            e.printStackTrace();
-//        }
+        try {
+            Thread.sleep(500L);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
         BufferedImage image = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
         for (int i = 0; i < width; i++) {
             float percentageAlongX = (float) (minX + i * (maxX - minX) / (width - 1));

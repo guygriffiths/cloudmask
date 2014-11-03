@@ -78,13 +78,11 @@ public class CloudMask extends Application {
         grid.add(test, 0, 1);
         grid.add(test2, 1, 0);
         
-        ZoomableImageView zoomView = new ZoomableImageView(250, 250, new TestImageGenerator());
+        ZoomableImageView zoomView = new ZoomableImageView(400, 400, new TestImageGenerator());
         grid.add(zoomView, 1, 1);
         
         imageView.setFitHeight(200);
         imageView.setFitWidth(200);
-//        imageWidth = image.getWidth();
-//        imageHeight = image.getHeight();
         
         imageView.setOnScroll(new EventHandler<ScrollEvent>() {
             @Override
