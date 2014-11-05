@@ -127,7 +127,6 @@ public class ZoomableImageView extends ImageView {
         if (imageGenerator == null) {
             throw new IllegalArgumentException("imageGenerator cannot be null");
         }
-
         /*
          * Set bounds
          */
@@ -227,7 +226,7 @@ public class ZoomableImageView extends ImageView {
                     double offsetY = (event.getY() - lastDragY);
                     lastDragX = event.getX();
                     lastDragY = event.getY();
-                    doPixelDrag(offsetX, offsetY);
+                    doPixelDrag(offsetX, -offsetY);
                     updateImageQuick();
                 }
             }
@@ -240,7 +239,11 @@ public class ZoomableImageView extends ImageView {
             @Override
             public void handle(MouseEvent event) {
                 if (event.getButton() == MouseButton.PRIMARY) {
-                    updateImage();
+                    /*
+                     * Leave it a second in case a user wants to click and drag
+                     * again further
+                     */
+                    regenerateImageIn(1000L);
                 }
             }
         });
@@ -265,7 +268,7 @@ public class ZoomableImageView extends ImageView {
          * The centre of the zoom in co-ordinate space
          */
         double coordCentreX = minX + (pixelCentreX / width) * (maxX - minX);
-        double coordCentreY = minY + (pixelCentreY / height) * (maxY - minY);
+        double coordCentreY = minY + ((height - pixelCentreY - 1) / height) * (maxY - minY);
         doZoom(factor, coordCentreX, coordCentreY);
     }
 
@@ -282,7 +285,6 @@ public class ZoomableImageView extends ImageView {
      *            The y co-ordinate of the centre of the zoom
      */
     protected void doZoom(double factor, double centreX, double centreY) {
-        System.out.println("zooming with factor "+factor);
         /*
          * Convenient values
          */
@@ -373,7 +375,7 @@ public class ZoomableImageView extends ImageView {
         });
         new Thread(regenerationTask).start();
     }
-    
+
     /**
      * Updates appropriate variables to represent a drag. Does not update the
      * image, just sets new limits
@@ -433,7 +435,7 @@ public class ZoomableImageView extends ImageView {
         double yfactor = (maxY - minY) / (maxYBorder - minYBorder);
 
         double xoff = (minX - minXBorder) * (currentImageWidth) / (maxXBorder - minXBorder);
-        double yoff = (minY - minYBorder) * (currentImageHeight) / (maxYBorder - minYBorder);
+        double yoff = (maxYBorder - maxY) * (currentImageHeight) / (maxYBorder - minYBorder);
         setViewport(new Rectangle2D(xoff, yoff, (currentImageWidth * xfactor),
                 (currentImageHeight * yfactor)));
     }
@@ -466,6 +468,10 @@ public class ZoomableImageView extends ImageView {
         if (maxYBorder > maxYBound) {
             maxYBorder = maxYBound;
         }
+//        minXBorder = minX;
+//        minYBorder = minY;
+//        maxXBorder = maxX;
+//        maxYBorder = maxY;
 
         /*
          * Calculate the size of the image which needs to be generated, and
@@ -480,7 +486,7 @@ public class ZoomableImageView extends ImageView {
         WritableImage fxImage = SwingFXUtils.toFXImage(imageGenerator.generateImage(minXBorder,
                 minYBorder, maxXBorder, maxYBorder, currentImageWidth, currentImageHeight), null);
         double xoff = (minX - minXBorder) * width / (maxX - minX);
-        double yoff = (minY - minYBorder) * width / (maxY - minY);
+        double yoff = (maxYBorder - maxY) * (height) / (maxY - minY);
         setImage(fxImage);
         setViewport(new Rectangle2D(xoff, yoff, width, height));
     }
@@ -492,11 +498,15 @@ public class ZoomableImageView extends ImageView {
          * @param minX
          *            the minimum x-coordinate
          * @param minY
-         *            the minimum y-coordinate
+         *            the minimum y-coordinate - this represents the bottom of
+         *            the image (note that this is *not* the standard behaviour
+         *            for a {@link BufferedImage})
          * @param maxX
          *            the maximum x-coordinate
          * @param maxY
-         *            the maximum y-coordinate
+         *            the maximum y-coordinate - this represents the top of the
+         *            image (note that this is *not* the standard behaviour for
+         *            a {@link BufferedImage})
          * @param width
          *            the desired width of the image
          * @param height

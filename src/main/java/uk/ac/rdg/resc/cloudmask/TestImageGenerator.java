@@ -38,11 +38,11 @@ public class TestImageGenerator implements ImageGenerator {
     @Override
     public BufferedImage generateImage(double minX, double minY, double maxX, double maxY,
             int width, int height) {
-        try {
-            Thread.sleep(500L);
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
+//        try {
+//            Thread.sleep(500L);
+//        } catch (InterruptedException e) {
+//            e.printStackTrace();
+//        }
         BufferedImage image = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
         for (int i = 0; i < width; i++) {
             float percentageAlongX = (float) (minX + i * (maxX - minX) / (width - 1));
@@ -52,7 +52,7 @@ public class TestImageGenerator implements ImageGenerator {
                         && percentageAlongY >= 0) {
                     int rgb = new Color(25 * (int) (percentageAlongX / 10.0f), 0,
                             25 * (int) (percentageAlongY / 10.0f)).getRGB();
-                    image.setRGB(i, j, rgb);
+                    image.setRGB(i, height-j-1, rgb);
                 } else {
                     image.setRGB(i, j, 0);
                 }
@@ -60,19 +60,16 @@ public class TestImageGenerator implements ImageGenerator {
         }
         
         Graphics2D g = image.createGraphics();
-        String centre = "" + (minX + (maxX - minX) / 2.0);
-        g.drawString(centre, width/2, height/2);
+        String ll = (int)(minX + (maxX - minX/4.0)) + ","+ (int)(minY + (maxY - minY/4.0));
+        g.drawString(ll, width/4, 3*height/4);
+        String lr = (int)(minX + 3*(maxX - minX/4.0)) + ","+ (int)(minY + (maxY - minY/4.0));
+        g.drawString(lr, 3*width/4, 3*height/4);
+        String ur = (int)(minX + 3*(maxX - minX/4.0)) + ","+ (int)(minY + 3*(maxY - minY/4.0));
+        g.drawString(ur, 3*width/4, height/4);
+        String ul = (int)(minX + (maxX - minX/4.0)) + ","+ (int)(minY + 3*(maxY - minY/4.0));
+        g.drawString(ul, width/4, height/4);
 //        System.out.println("generated "+(count++));
         return image;
-    }
-
-    public static void main(String[] args) {
-        TestImageGenerator tig = new TestImageGenerator();
-        tig.generateImage(0, 0, 50, 0, 20, 30);
-        System.out.println();
-        tig.generateImage(40, 0, 60, 0, 20, 30);
-        System.out.println();
-        tig.generateImage(0, 0, 50, 0, 10, 30);
     }
 
     @Override

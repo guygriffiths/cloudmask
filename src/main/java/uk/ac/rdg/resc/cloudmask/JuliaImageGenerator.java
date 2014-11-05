@@ -56,7 +56,7 @@ public class JuliaImageGenerator implements ImageGenerator {
         for(int i=0;i<width; i++) {
             double x = minX + i*(maxX-minX)/width;
             for(int j=0;j<height; j++) {
-                double y = minY + j*(maxY-minY)/height;
+                double y = minY + (height - 1 - j)*(maxY-minY)/height;
                 int iterations = 0;
                 double xp = x;
                 double yp = y;
