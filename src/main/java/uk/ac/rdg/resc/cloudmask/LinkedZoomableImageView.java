@@ -93,7 +93,7 @@ public class LinkedZoomableImageView extends ZoomableImageView {
     }
 
     @Override
-    protected void updateImage() {
+    public void updateImage() {
         super.updateImage();
         for (LinkedZoomableImageView view : linkedViews) {
             view.updateLinkedImage();

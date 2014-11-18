@@ -28,54 +28,40 @@
 
 package uk.ac.rdg.resc.cloudmask;
 
-import javafx.application.Application;
-import javafx.event.ActionEvent;
-import javafx.event.EventHandler;
-import javafx.scene.Scene;
-import javafx.scene.control.Button;
-import javafx.scene.layout.GridPane;
-import javafx.stage.Stage;
-import uk.ac.rdg.resc.edal.dataset.cdm.MaskedDatasetFactory;
-import uk.ac.rdg.resc.edal.dataset.cdm.MaskedDatasetFactory.MaskedDataset;
-import uk.ac.rdg.resc.edal.dataset.cdm.NativeCdmGridDatasetFactory;
 import uk.ac.rdg.resc.edal.dataset.plugins.VariablePlugin;
 import uk.ac.rdg.resc.edal.exceptions.EdalException;
-import uk.ac.rdg.resc.edal.graphics.style.util.SimpleFeatureCatalogue;
+import uk.ac.rdg.resc.edal.metadata.GridVariableMetadata;
+import uk.ac.rdg.resc.edal.metadata.Parameter;
+import uk.ac.rdg.resc.edal.metadata.VariableMetadata;
+import uk.ac.rdg.resc.edal.position.HorizontalPosition;
 
-public class CloudMask extends Application {
+class DiffPlugin extends VariablePlugin {
 
-    public static void main(String[] args) {
-        launch(args);
+    private static final String DIFF = "diff";
+
+    public DiffPlugin(String xVar, String yVar) {
+        super(new String[] { xVar, yVar }, new String[] { DIFF });
     }
 
     @Override
-    public void start(Stage primaryStage) throws Exception {
-        primaryStage.setTitle("Cloud Masker");
+    protected VariableMetadata[] doProcessVariableMetadata(VariableMetadata... metadata)
+            throws EdalException {
+        GridVariableMetadata xMeta = (GridVariableMetadata) metadata[0];
+        GridVariableMetadata yMeta = (GridVariableMetadata) metadata[1];
 
-        GridPane grid = new GridPane();
+        VariableMetadata diffMeta = newVariableMetadataFromMetadata(new Parameter(
+                getFullId(DIFF), xMeta.getParameter().getTitle() + " - "
+                        + yMeta.getParameter().getTitle(),
+                "Difference between variables " + xMeta.getId() + " and "
+                        + yMeta.getId(), xMeta.getParameter().getUnits(), null), true, xMeta,
+                yMeta);
+        diffMeta.setParent(xMeta.getParent(), null);
+        return new VariableMetadata[] { diffMeta };
+    }
 
-        MaskedDatasetFactory mdf = new MaskedDatasetFactory(new NativeCdmGridDatasetFactory());
-        MaskedDataset dataset = mdf.createDataset("test", "/home/guy/test_file.nc");
-        SimpleFeatureCatalogue<MaskedDataset> catalogue = new SimpleFeatureCatalogue<>(dataset, true);
-
-        VariablePlugin diffPlugin = new NormalisedDiffPlugin("btemp_nadir_1100", "btemp_nadir_1200");
-
-        grid.add(new MaskingPane(catalogue, 512, 512), 0, 0);
-        
-        Button button = new Button("Press me!");
-        button.setOnAction(new EventHandler<ActionEvent>() {
-            @Override
-            public void handle(ActionEvent event) {
-                try {
-                    dataset.addVariablePlugin(diffPlugin);
-                } catch (EdalException e) {
-                    e.printStackTrace();
-                }
-            }
-        });
-        grid.add(button, 0, 1);
-
-        primaryStage.setScene(new Scene(grid, 300, 250));
-        primaryStage.show();
+    @Override
+    protected Number generateValue(String varSuffix, HorizontalPosition pos,
+            Number... sourceValues) {
+        return sourceValues[0].doubleValue() - sourceValues[1].doubleValue();
     }
 }

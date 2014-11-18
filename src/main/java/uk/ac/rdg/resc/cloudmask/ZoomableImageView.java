@@ -50,19 +50,19 @@ import javafx.scene.input.ScrollEvent;
  */
 public class ZoomableImageView extends ImageView {
     /** The minimum valid x co-ordinate for image generation */
-    private final double minXBound;
+    private double minXBound;
     /** The minimum valid y co-ordinate for image generation */
-    private final double minYBound;
+    private double minYBound;
     /** The maximum valid x co-ordinate for image generation */
-    private final double maxXBound;
+    private double maxXBound;
     /** The maximum valid y co-ordinate for image generation */
-    private final double maxYBound;
+    private double maxYBound;
     /** The width in pixels of the {@link ImageView} widget */
     private final int width;
     /** The height in pixels of the {@link ImageView} widget */
     private final int height;
     /** The {@link ImageGenerator} which will be used to generate images */
-    protected final ImageGenerator imageGenerator;
+    protected ImageGenerator imageGenerator;
 
     /*
      * Store the co-ordinate of the last drag point so that image can be updated
@@ -125,32 +125,35 @@ public class ZoomableImageView extends ImageView {
         super();
 
         if (imageGenerator == null) {
-            throw new IllegalArgumentException("imageGenerator cannot be null");
+            imageGenerator = new ImageGenerator() {
+                @Override
+                public double getMinValidY() {
+                    return 0;
+                }
+                
+                @Override
+                public double getMinValidX() {
+                    return 0;
+                }
+                
+                @Override
+                public double getMaxValidY() {
+                    return 1;
+                }
+                
+                @Override
+                public double getMaxValidX() {
+                    return 1;
+                }
+                
+                @Override
+                public BufferedImage generateImage(double minX, double minY, double maxX, double maxY,
+                        int width, int height) {
+                    return new BufferedImage(width, height, BufferedImage.TYPE_3BYTE_BGR);
+                }
+            };
         }
-        /*
-         * Set bounds
-         */
-        minXBound = imageGenerator.getMinValidX();
-        minYBound = imageGenerator.getMinValidY();
-        maxXBound = imageGenerator.getMaxValidX();
-        maxYBound = imageGenerator.getMaxValidY();
-
-        /*
-         * Set initial values to image bounds
-         */
-        minX = minXBound;
-        minY = minYBound;
-        maxX = maxXBound;
-        maxY = maxYBound;
-
-        /*
-         * Set initial border values to image bounds
-         */
-        minXBorder = minX;
-        minYBorder = minY;
-        maxXBorder = maxX;
-        maxYBorder = maxY;
-
+        
         /*
          * Height of the widget
          */
@@ -162,8 +165,7 @@ public class ZoomableImageView extends ImageView {
          */
         this.currentImageWidth = width;
         this.currentImageHeight = height;
-
-        this.imageGenerator = imageGenerator;
+        
 
         /*
          * Set the widget size
@@ -171,17 +173,11 @@ public class ZoomableImageView extends ImageView {
         setFitWidth(width);
         setFitHeight(height);
 
-        /*
-         * Now generate the initial image to be displayed
-         */
-        setImage(SwingFXUtils.toFXImage(
-                imageGenerator.generateImage(minX, minY, maxX, maxY, width, height), null));
-        setViewport(new Rectangle2D(0, 0, width, height));
-
+        setImageGenerator(imageGenerator);
+        
         /*
          * Add handlers for mouse events
          */
-
         setOnScroll(new EventHandler<ScrollEvent>() {
             @Override
             public void handle(ScrollEvent event) {
@@ -249,6 +245,41 @@ public class ZoomableImageView extends ImageView {
         });
     }
 
+    public void setImageGenerator(ImageGenerator imageGenerator) {
+        /*
+         * Set bounds
+         */
+        minXBound = imageGenerator.getMinValidX();
+        minYBound = imageGenerator.getMinValidY();
+        maxXBound = imageGenerator.getMaxValidX();
+        maxYBound = imageGenerator.getMaxValidY();
+
+        /*
+         * Set initial values to image bounds
+         */
+        minX = minXBound;
+        minY = minYBound;
+        maxX = maxXBound;
+        maxY = maxYBound;
+
+        /*
+         * Set initial border values to image bounds
+         */
+        minXBorder = minX;
+        minYBorder = minY;
+        maxXBorder = maxX;
+        maxYBorder = maxY;
+        
+        this.imageGenerator = imageGenerator;
+        
+        /*
+         * Now generate the initial image to be displayed
+         */
+        setImage(SwingFXUtils.toFXImage(
+                imageGenerator.generateImage(minX, minY, maxX, maxY, width, height), null));
+        setViewport(new Rectangle2D(0, 0, width, height));
+    }
+    
     /**
      * Updates appropriate variables to represent a zoom. Does not update the
      * image, just sets new limits
@@ -439,21 +470,26 @@ public class ZoomableImageView extends ImageView {
         setViewport(new Rectangle2D(xoff, yoff, (currentImageWidth * xfactor),
                 (currentImageHeight * yfactor)));
     }
-
+    
     /**
      * Updates the image by requesting a new one from the {@link ImageGenerator}
      * The new image will have a border up to the size of the image on all sides
      * to allow for dragging
      */
-    protected void updateImage() {
-        /*
-         * Generate an image with a border around it to allow for smooth panning
-         */
-        minXBorder = 2 * minX - maxX;
-        maxXBorder = 2 * maxX - minX;
-
-        minYBorder = 2 * minY - maxY;
-        maxYBorder = 2 * maxY - minY;
+    public void updateImage() {
+//        /*
+//         * Generate an image with a border around it to allow for smooth panning
+//         */
+//        minXBorder = 2 * minX - maxX;
+//        maxXBorder = 2 * maxX - minX;
+//
+//        minYBorder = 2 * minY - maxY;
+//        maxYBorder = 2 * maxY - minY;
+        
+        minXBorder = minX;
+        minYBorder = minY;
+        maxXBorder = maxX;
+        maxYBorder = maxY;
 
         if (minXBorder < minXBound) {
             minXBorder = minXBound;
@@ -468,10 +504,6 @@ public class ZoomableImageView extends ImageView {
         if (maxYBorder > maxYBound) {
             maxYBorder = maxYBound;
         }
-//        minXBorder = minX;
-//        minYBorder = minY;
-//        maxXBorder = maxX;
-//        maxYBorder = maxY;
 
         /*
          * Calculate the size of the image which needs to be generated, and

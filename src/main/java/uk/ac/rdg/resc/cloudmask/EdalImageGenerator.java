@@ -28,6 +28,7 @@
 
 package uk.ac.rdg.resc.cloudmask;
 
+import java.awt.Color;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
 
@@ -42,36 +43,76 @@ import uk.ac.rdg.resc.edal.graphics.style.SegmentColourScheme;
 import uk.ac.rdg.resc.edal.graphics.style.util.GraphicsUtils;
 import uk.ac.rdg.resc.edal.graphics.style.util.SimpleFeatureCatalogue;
 import uk.ac.rdg.resc.edal.metadata.GridVariableMetadata;
+import uk.ac.rdg.resc.edal.util.Extents;
 import uk.ac.rdg.resc.edal.util.PlottingDomainParams;
 
 public class EdalImageGenerator implements ImageGenerator {
     private final int xSize;
     private final int ySize;
     private MapImage image;
-    private SimpleFeatureCatalogue catalogue;
+    private SimpleFeatureCatalogue<?> catalogue;
+    private RasterLayer threshold;
+    private String var;
+    private Extent<Float> scaleRange;
+    private float minThresh = 0f;
+    private float maxThresh = 1f;
+    
+    private Color maskColor = new Color(0, 0, 0, 150);
 
-    public EdalImageGenerator(String var, SimpleFeatureCatalogue catalogue) throws IOException, EdalException {
+    public EdalImageGenerator(String var, SimpleFeatureCatalogue<?> catalogue) throws IOException,
+            EdalException {
         this(var, catalogue, GraphicsUtils.estimateValueRange(catalogue.getDataset(), var));
     }
-    
-    public EdalImageGenerator(String var, SimpleFeatureCatalogue catalogue, Extent<Float> scaleRange) throws IOException, EdalException {
-        GridVariableMetadata variableMetadata = (GridVariableMetadata) catalogue.getDataset().getVariableMetadata(var);
+
+    public EdalImageGenerator(String var, SimpleFeatureCatalogue<?> catalogue,
+            Extent<Float> scaleRange) throws IOException, EdalException {
+        GridVariableMetadata variableMetadata = (GridVariableMetadata) catalogue.getDataset()
+                .getVariableMetadata(var);
+        this.var = var;
         xSize = variableMetadata.getHorizontalDomain().getXSize();
         ySize = variableMetadata.getHorizontalDomain().getYSize();
         this.catalogue = catalogue;
+        this.scaleRange = scaleRange;
         RasterLayer raster = new RasterLayer(var, new SegmentColourScheme(new ColourScale(
                 scaleRange, false), null, null, null, "seq-cubeYF", 250));
+        minThresh = scaleRange.getLow();
+        maxThresh = scaleRange.getHigh();
+        threshold = new RasterLayer(var, new SegmentColourScheme(new ColourScale(
+                minThresh, maxThresh, false), maskColor, maskColor, null, "#00000000", 1));
         image = new MapImage();
         image.getLayers().add(raster);
+        image.getLayers().add(threshold);
+    }
+    
+    public void setMinThreshold(float min) {
+        setThreshold(min, maxThresh);
+    }
+    
+    public void setMaxThreshold(float max) {
+        setThreshold(minThresh, max);
+    }
+
+    public void setThreshold(float min, float max) {
+        minThresh = min;
+        maxThresh = max;
+        image.getLayers().remove(threshold);
+        threshold = new RasterLayer(var, new SegmentColourScheme(new ColourScale(Extents.newExtent(
+                minThresh, maxThresh), false), maskColor, maskColor,
+                null, "#00000000", 1));
+        image.getLayers().add(threshold);
+    }
+
+    public Extent<Float> getScaleRange() {
+        return scaleRange;
     }
 
     @Override
     public BufferedImage generateImage(double minX, double minY, double maxX, double maxY,
             int width, int height) {
         try {
-            BufferedImage drawImage = image.drawImage(
-                    new PlottingDomainParams(width, height, new BoundingBoxImpl(minX, minY, maxX,
-                            maxY, null), null, null, null, null, null), catalogue);
+            PlottingDomainParams params = new PlottingDomainParams(width, height,
+                    new BoundingBoxImpl(minX, minY, maxX, maxY, null), null, null, null, null, null);
+            BufferedImage drawImage = image.drawImage(params, catalogue);
             return drawImage;
         } catch (EdalException e) {
             e.printStackTrace();

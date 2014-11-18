@@ -102,7 +102,7 @@ public final class NativeCdmGridDatasetFactory extends DatasetFactory {
                     Dimension xDimension = grid.getXDimension();
                     Dimension yDimension = grid.getYDimension();
                     
-                    RegularAxis xAxis = new RegularAxisImpl("x-axis", -0.5, 1.0, xDimension.getLength(), false);
+                    RegularAxis xAxis = new RegularAxisImpl("x-axis", 0.5, 1.0, xDimension.getLength(), false);
                     RegularAxis yAxis = new RegularAxisImpl("y-axis", yDimension.getLength() - 0.5, -1.0, yDimension.getLength(), false);
                     HorizontalGrid hDomain = new RegularGridImpl(xAxis, yAxis, null);
                     

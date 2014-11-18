@@ -149,6 +149,11 @@
             <artifactId>edal-cdm</artifactId>
             <version>${edal-version}</version>
         </dependency>
+        <dependency>
+            <groupId>org.controlsfx</groupId>
+            <artifactId>controlsfx</artifactId>
+            <version>8.20.8</version>
+        </dependency>
     </dependencies>
     <scm>
         <connection>scm:git:git://github.com/guygriffiths/cloudmask</connection>
@@ -156,11 +161,7 @@
         <url>https://github.com/guygriffiths/cloudmask</url>
     </scm>
     <repositories>
-        <!--
-        <repository>
-            <id>edal-snapshots</id>
-            <url>https://oss.sonatype.org/content/repositories/snapshots</url>
-        </repository>
-        -->
+        <!-- <repository> <id>edal-snapshots</id> <url>https://oss.sonatype.org/content/repositories/snapshots</url> 
+            </repository> -->
     </repositories>
 </project>
