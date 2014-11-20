@@ -125,33 +125,7 @@ public class ZoomableImageView extends ImageView {
         super();
 
         if (imageGenerator == null) {
-            imageGenerator = new ImageGenerator() {
-                @Override
-                public double getMinValidY() {
-                    return 0;
-                }
-                
-                @Override
-                public double getMinValidX() {
-                    return 0;
-                }
-                
-                @Override
-                public double getMaxValidY() {
-                    return 1;
-                }
-                
-                @Override
-                public double getMaxValidX() {
-                    return 1;
-                }
-                
-                @Override
-                public BufferedImage generateImage(double minX, double minY, double maxX, double maxY,
-                        int width, int height) {
-                    return new BufferedImage(width, height, BufferedImage.TYPE_3BYTE_BGR);
-                }
-            };
+            throw new IllegalArgumentException("ImageGenerator cannot be null");
         }
         
         /*
@@ -166,6 +140,7 @@ public class ZoomableImageView extends ImageView {
         this.currentImageWidth = width;
         this.currentImageHeight = height;
         
+        this.imageGenerator = imageGenerator;
 
         /*
          * Set the widget size
@@ -173,7 +148,37 @@ public class ZoomableImageView extends ImageView {
         setFitWidth(width);
         setFitHeight(height);
 
-        setImageGenerator(imageGenerator);
+        /*
+         * Set bounds
+         */
+        minXBound = imageGenerator.getMinValidX();
+        minYBound = imageGenerator.getMinValidY();
+        maxXBound = imageGenerator.getMaxValidX();
+        maxYBound = imageGenerator.getMaxValidY();
+
+        /*
+         * Set initial values to image bounds
+         */
+        minX = minXBound;
+        minY = minYBound;
+        maxX = maxXBound;
+        maxY = maxYBound;
+
+        /*
+         * Set initial border values to image bounds
+         */
+        minXBorder = minX;
+        minYBorder = minY;
+        maxXBorder = maxX;
+        maxYBorder = maxY;
+        
+        
+        /*
+         * Now generate the initial image to be displayed
+         */
+        setImage(SwingFXUtils.toFXImage(
+                imageGenerator.generateImage(minX, minY, maxX, maxY, width, height), null));
+        setViewport(new Rectangle2D(0, 0, width, height));
         
         /*
          * Add handlers for mouse events
@@ -245,41 +250,6 @@ public class ZoomableImageView extends ImageView {
         });
     }
 
-    public void setImageGenerator(ImageGenerator imageGenerator) {
-        /*
-         * Set bounds
-         */
-        minXBound = imageGenerator.getMinValidX();
-        minYBound = imageGenerator.getMinValidY();
-        maxXBound = imageGenerator.getMaxValidX();
-        maxYBound = imageGenerator.getMaxValidY();
-
-        /*
-         * Set initial values to image bounds
-         */
-        minX = minXBound;
-        minY = minYBound;
-        maxX = maxXBound;
-        maxY = maxYBound;
-
-        /*
-         * Set initial border values to image bounds
-         */
-        minXBorder = minX;
-        minYBorder = minY;
-        maxXBorder = maxX;
-        maxYBorder = maxY;
-        
-        this.imageGenerator = imageGenerator;
-        
-        /*
-         * Now generate the initial image to be displayed
-         */
-        setImage(SwingFXUtils.toFXImage(
-                imageGenerator.generateImage(minX, minY, maxX, maxY, width, height), null));
-        setViewport(new Rectangle2D(0, 0, width, height));
-    }
-    
     /**
      * Updates appropriate variables to represent a zoom. Does not update the
      * image, just sets new limits
@@ -515,12 +485,14 @@ public class ZoomableImageView extends ImageView {
          * Generate a new BufferedImage and convert it to a WritableImage for
          * display.
          */
-        WritableImage fxImage = SwingFXUtils.toFXImage(imageGenerator.generateImage(minXBorder,
-                minYBorder, maxXBorder, maxYBorder, currentImageWidth, currentImageHeight), null);
-        double xoff = (minX - minXBorder) * width / (maxX - minX);
-        double yoff = (maxYBorder - maxY) * (height) / (maxY - minY);
-        setImage(fxImage);
-        setViewport(new Rectangle2D(xoff, yoff, width, height));
+        if(imageGenerator != null) {
+            WritableImage fxImage = SwingFXUtils.toFXImage(imageGenerator.generateImage(minXBorder,
+                    minYBorder, maxXBorder, maxYBorder, currentImageWidth, currentImageHeight), null);
+            double xoff = (minX - minXBorder) * width / (maxX - minX);
+            double yoff = (maxYBorder - maxY) * (height) / (maxY - minY);
+            setImage(fxImage);
+            setViewport(new Rectangle2D(xoff, yoff, width, height));
+        }
     }
 
     public interface ImageGenerator {

@@ -32,104 +32,71 @@ import java.io.IOException;
 
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
+import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
-import javafx.scene.control.ListCell;
-import javafx.scene.control.ListView;
 import javafx.scene.layout.BorderPane;
-import javafx.util.Callback;
 
-import org.controlsfx.control.RangeSlider;
+import org.controlsfx.control.CheckListView;
 
 import uk.ac.rdg.resc.cloudmask.MaskedDatasetFactory.MaskedDataset;
-import uk.ac.rdg.resc.edal.domain.Extent;
 import uk.ac.rdg.resc.edal.exceptions.EdalException;
-import uk.ac.rdg.resc.edal.exceptions.VariableNotFoundException;
 import uk.ac.rdg.resc.edal.graphics.style.util.SimpleFeatureCatalogue;
 
-public class MaskingPane extends BorderPane {
-//    private FeatureCatalogue catalogue;
-    private LinkedZoomableImageView imageView = null;
-    private ListView<String> variables;
-    private RangeSlider maskRangeSlider;
-    private EdalImageGenerator imageGenerator = null;
-    
-    private String currentVar = null;
+public class CompositeMaskPane extends BorderPane {
+    LinkedZoomableImageView imageView;
+    private CheckListView<String> variables;
+    private CompositeMaskEdalImageGenerator imageGenerator;
 
-    public MaskingPane(SimpleFeatureCatalogue<MaskedDataset> catalogue, int imageWidth,
-            int imageHeight, CompositeMaskPane compositePane) throws EdalException, IOException {
+    private String[] mask = null;
+
+    public CompositeMaskPane(SimpleFeatureCatalogue<MaskedDataset> catalogue, int imageWidth,
+            int imageHeight) throws IOException, EdalException {
+
         MaskedDataset dataset = catalogue.getDataset();
 
-        maskRangeSlider = new RangeSlider();
-        
-        variables = new ListView<>();
+        variables = new CheckListView<>();
         ObservableList<String> variableNames = catalogue.getDataset().getUnmaskedVariableNames();
-        if(variableNames.size() == 0) {
+        if (variableNames.size() == 0) {
             throw new EdalException("No variables are present.");
         }
-        
-        imageGenerator = new MaskedEdalImageGenerator(variableNames.get(0), catalogue);
+
+        imageGenerator = new CompositeMaskEdalImageGenerator(variableNames.get(0), catalogue);
         imageView = new LinkedZoomableImageView(imageWidth, imageHeight, imageGenerator);
-        
-        variables.setItems(variableNames);
+
+        variables.setItems(catalogue.getDataset().getUnmaskedVariableNames());
         variables.getSelectionModel().selectedItemProperty()
                 .addListener(new ChangeListener<String>() {
                     @Override
                     public void changed(ObservableValue<? extends String> observable,
                             String oldVar, String newVar) {
+                        if (mask == null) {
+                            mask = new String[] { newVar };
+                        }
                         try {
-                            currentVar = newVar;
-                            imageGenerator.setVariable(currentVar);
-                            Extent<Double> maskRange = dataset.getMaskThreshold(newVar);
-                            Extent<Float> scaleRange = imageGenerator.getScaleRange();
-                            maskRangeSlider.setMin(scaleRange.getLow());
-                            maskRangeSlider.setLowValue(maskRange.getLow());
-                            maskRangeSlider.setMax(scaleRange.getHigh());
-                            maskRangeSlider.setHighValue(maskRange.getHigh());
+                            imageGenerator.setVariable(newVar);
+                            imageView.updateImage();
                         } catch (EdalException e) {
                             e.printStackTrace();
                         }
                     }
                 });
         variables.getSelectionModel().select(0);
-        
-        compositePane.imageView.addLinkedView(imageView);
-        variables.setCellFactory(new Callback<ListView<String>, ListCell<String>>() {
+        variables.getCheckModel().getCheckedItems().addListener(new ListChangeListener<String>() {
             @Override
-            public ListCell<String> call(ListView<String> listView) {
-                return new ListCell<String>() {
-                    @Override
-                    protected void updateItem(String item, boolean empty) {
-                        super.updateItem(item, empty);
-                        try {
-                            setText(dataset.getVariableMetadata(item).getParameter().getTitle());
-                        } catch (VariableNotFoundException e) {
-                            setText(item);
-                        }
-                    }
-                };
-            }
-        });
-        
-        maskRangeSlider.lowValueProperty().addListener(new ChangeListener<Number>() {
-            @Override
-            public void changed(ObservableValue<? extends Number> observer, Number oldVal,
-                    Number newVal) {
-                dataset.setMaskMinThreshold(currentVar, newVal.floatValue());
-                imageView.updateImage();
-            }
-        });
-        maskRangeSlider.highValueProperty().addListener(new ChangeListener<Number>() {
-            @Override
-            public void changed(ObservableValue<? extends Number> observer, Number oldVal,
-                    Number newVal) {
-                dataset.setMaskMaxThreshold(currentVar, newVal.floatValue());
+            public void onChanged(javafx.collections.ListChangeListener.Change<? extends String> c) {
+                mask = new String[variables.getCheckModel().getCheckedItems().size()];
+                for (int i = 0; i < variables.getCheckModel().getCheckedItems().size(); i++) {
+                    mask[i] = variables.getCheckModel().getCheckedItems().get(i) + "-"
+                            + MaskedDatasetFactory.MASK_SUFFIX;
+                }
+                catalogue.expireFromCache(CompositeMaskPlugin.COMPOSITEMASK);
+                dataset.setMaskedVariables(mask);
                 imageView.updateImage();
             }
         });
 
         setCenter(imageView);
         setRight(variables);
-        setBottom(maskRangeSlider);
 
         catalogue.getDataset().getUnmaskedVariableNames();
     }

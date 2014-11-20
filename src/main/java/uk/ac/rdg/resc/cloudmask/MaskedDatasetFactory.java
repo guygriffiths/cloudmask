@@ -26,7 +26,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  ******************************************************************************/
 
-package uk.ac.rdg.resc.edal.dataset.cdm;
+package uk.ac.rdg.resc.cloudmask;
 
 import java.io.IOException;
 import java.util.HashMap;
@@ -34,7 +34,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.TreeSet;
 
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -53,12 +52,13 @@ import uk.ac.rdg.resc.edal.graphics.style.util.GraphicsUtils;
 import uk.ac.rdg.resc.edal.metadata.Parameter;
 import uk.ac.rdg.resc.edal.metadata.VariableMetadata;
 import uk.ac.rdg.resc.edal.position.HorizontalPosition;
+import uk.ac.rdg.resc.edal.util.Extents;
 import uk.ac.rdg.resc.edal.util.PlottingDomainParams;
 
 public class MaskedDatasetFactory extends DatasetFactory {
 
-    private final static String MASK_SUFFIX = "MASK";
-    
+    public final static String MASK_SUFFIX = "MASK";
+
     private DatasetFactory parentDatasetFactory;
 
     public MaskedDatasetFactory(DatasetFactory parentDatasetFactory) {
@@ -71,8 +71,6 @@ public class MaskedDatasetFactory extends DatasetFactory {
         Dataset dataset = parentDatasetFactory.createDataset(id, location);
         return new MaskedDataset(dataset);
     }
-    
-    
 
     /**
      * Wraps an existing {@link Dataset} object and adds {@link VariablePlugin}s
@@ -85,6 +83,8 @@ public class MaskedDatasetFactory extends DatasetFactory {
         private final Dataset ds;
         private Map<String, ThresholdMaskPlugin> thresholds;
         private ObservableList<String> unmaskedVariables;
+        
+        private CompositeMaskPlugin compositePlugin;
 
         public MaskedDataset(Dataset dataset) throws EdalException {
             this.ds = dataset;
@@ -92,9 +92,20 @@ public class MaskedDatasetFactory extends DatasetFactory {
             unmaskedVariables = FXCollections.observableArrayList(ds.getVariableIds());
 
             Set<String> variableIds = new HashSet<>(dataset.getVariableIds());
+            String[] allVars = new String[variableIds.size()];
+            int i = 0;
             for (String var : variableIds) {
                 addMaskToVariable(var);
+                allVars[i++] = var;
             }
+
+            /*
+             * We now add the composite mask plugin. This will have a domain
+             * which is compatible with all other masked variables. However, no
+             * variables will be used for masking until they are explicitly set
+             */
+            compositePlugin = new CompositeMaskPlugin(allVars);
+            dataset.addVariablePlugin(compositePlugin);
         }
 
         @Override
@@ -114,17 +125,34 @@ public class MaskedDatasetFactory extends DatasetFactory {
             thresholds.put(varId, thresholdPlugin);
         }
 
+        public void setMaskMaxThreshold(String varId, double max) {
+            thresholds.get(varId).setMaxThreshold(max);
+        }
+
+        public void setMaskMinThreshold(String varId, double min) {
+            thresholds.get(varId).setMinThreshold(min);
+        }
+
         public void setMaskThreshold(String varId, double min, double max) {
             thresholds.get(varId).setThreshold(min, max);
         }
         
+        public void setMaskedVariables(String...vars) {
+            compositePlugin.setMasks(vars);
+        }
+
+        public Extent<Double> getMaskThreshold(String varId) {
+            ThresholdMaskPlugin plugin = thresholds.get(varId);
+            return Extents.newExtent(plugin.min, plugin.max);
+        }
+
         public ObservableList<String> getUnmaskedVariableNames() {
             return unmaskedVariables;
         }
-        
+
         public String getMaskedVariableName(String varId) throws VariableNotFoundException {
-            if(ds.getVariableIds().contains(varId) && !thresholds.containsKey(varId)) {
-                return varId+"-"+MASK_SUFFIX;
+            if (ds.getVariableIds().contains(varId) && !thresholds.containsKey(varId)) {
+                return varId + "-" + MASK_SUFFIX;
             } else {
                 throw new VariableNotFoundException(varId);
             }
@@ -151,7 +179,8 @@ public class MaskedDatasetFactory extends DatasetFactory {
         }
 
         @Override
-        public Feature<?> readFeature(String featureId) throws DataReadingException, VariableNotFoundException {
+        public Feature<?> readFeature(String featureId) throws DataReadingException,
+                VariableNotFoundException {
             return ds.readFeature(featureId);
         }
 
@@ -161,7 +190,8 @@ public class MaskedDatasetFactory extends DatasetFactory {
         }
 
         @Override
-        public VariableMetadata getVariableMetadata(String variableId) throws VariableNotFoundException {
+        public VariableMetadata getVariableMetadata(String variableId)
+                throws VariableNotFoundException {
             return ds.getVariableMetadata(variableId);
         }
 
@@ -223,6 +253,14 @@ public class MaskedDatasetFactory extends DatasetFactory {
             setThreshold(min, max);
         }
 
+        public void setMinThreshold(double min) {
+            this.min = min;
+        }
+
+        public void setMaxThreshold(double max) {
+            this.max = max;
+        }
+
         public void setThreshold(double min, double max) {
             this.min = min;
             this.max = max;
@@ -245,8 +283,8 @@ public class MaskedDatasetFactory extends DatasetFactory {
         protected Number generateValue(String varSuffix, HorizontalPosition pos,
                 Number... sourceValues) {
             if (sourceValues[0].doubleValue() <= min || sourceValues[0].doubleValue() >= max)
-                return 0;
-            return 1;
+                return 1;
+            return 0;
         }
     }
 }

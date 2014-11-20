@@ -28,7 +28,6 @@
 
 package uk.ac.rdg.resc.cloudmask;
 
-import java.awt.Color;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
 
@@ -43,21 +42,15 @@ import uk.ac.rdg.resc.edal.graphics.style.SegmentColourScheme;
 import uk.ac.rdg.resc.edal.graphics.style.util.GraphicsUtils;
 import uk.ac.rdg.resc.edal.graphics.style.util.SimpleFeatureCatalogue;
 import uk.ac.rdg.resc.edal.metadata.GridVariableMetadata;
-import uk.ac.rdg.resc.edal.util.Extents;
 import uk.ac.rdg.resc.edal.util.PlottingDomainParams;
 
 public class EdalImageGenerator implements ImageGenerator {
     private final int xSize;
     private final int ySize;
-    private MapImage image;
-    private SimpleFeatureCatalogue<?> catalogue;
-    private RasterLayer threshold;
-    private String var;
-    private Extent<Float> scaleRange;
-    private float minThresh = 0f;
-    private float maxThresh = 1f;
-    
-    private Color maskColor = new Color(0, 0, 0, 150);
+    protected MapImage image;
+    protected SimpleFeatureCatalogue<?> catalogue;
+    protected Extent<Float> scaleRange;
+    private RasterLayer rasterLayer;
 
     public EdalImageGenerator(String var, SimpleFeatureCatalogue<?> catalogue) throws IOException,
             EdalException {
@@ -68,38 +61,33 @@ public class EdalImageGenerator implements ImageGenerator {
             Extent<Float> scaleRange) throws IOException, EdalException {
         GridVariableMetadata variableMetadata = (GridVariableMetadata) catalogue.getDataset()
                 .getVariableMetadata(var);
-        this.var = var;
         xSize = variableMetadata.getHorizontalDomain().getXSize();
         ySize = variableMetadata.getHorizontalDomain().getYSize();
         this.catalogue = catalogue;
         this.scaleRange = scaleRange;
-        RasterLayer raster = new RasterLayer(var, new SegmentColourScheme(new ColourScale(
-                scaleRange, false), null, null, null, "seq-cubeYF", 250));
-        minThresh = scaleRange.getLow();
-        maxThresh = scaleRange.getHigh();
-        threshold = new RasterLayer(var, new SegmentColourScheme(new ColourScale(
-                minThresh, maxThresh, false), maskColor, maskColor, null, "#00000000", 1));
+        rasterLayer = new RasterLayer(var, new SegmentColourScheme(new ColourScale(scaleRange,
+                false), null, null, null, "seq-cubeYF", 250));
         image = new MapImage();
-        image.getLayers().add(raster);
-        image.getLayers().add(threshold);
+        image.getLayers().add(rasterLayer);
     }
     
-    public void setMinThreshold(float min) {
-        setThreshold(min, maxThresh);
-    }
-    
-    public void setMaxThreshold(float max) {
-        setThreshold(minThresh, max);
+    public void setVariable(String var) throws EdalException {
+        this.setVariable(var, GraphicsUtils.estimateValueRange(catalogue.getDataset(), var));
     }
 
-    public void setThreshold(float min, float max) {
-        minThresh = min;
-        maxThresh = max;
-        image.getLayers().remove(threshold);
-        threshold = new RasterLayer(var, new SegmentColourScheme(new ColourScale(Extents.newExtent(
-                minThresh, maxThresh), false), maskColor, maskColor,
-                null, "#00000000", 1));
-        image.getLayers().add(threshold);
+    public void setVariable(String var, Extent<Float> scaleRange) throws EdalException {
+        GridVariableMetadata variableMetadata = (GridVariableMetadata) catalogue.getDataset()
+                .getVariableMetadata(var);
+        if (xSize != variableMetadata.getHorizontalDomain().getXSize()
+                || ySize != variableMetadata.getHorizontalDomain().getYSize()) {
+            throw new EdalException(
+                    "Cannot set this variable - must have the same grid size as existing variable");
+        }
+        this.scaleRange = scaleRange;
+        image.getLayers().remove(rasterLayer);
+        rasterLayer = new RasterLayer(var, new SegmentColourScheme(new ColourScale(scaleRange,
+                false), null, null, null, "seq-cubeYF", 250));
+        image.getLayers().add(0, rasterLayer);
     }
 
     public Extent<Float> getScaleRange() {
@@ -139,4 +127,5 @@ public class EdalImageGenerator implements ImageGenerator {
     public double getMaxValidY() {
         return ySize - 1;
     }
+
 }
