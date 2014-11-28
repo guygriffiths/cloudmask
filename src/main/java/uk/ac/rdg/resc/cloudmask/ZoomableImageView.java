@@ -127,7 +127,7 @@ public class ZoomableImageView extends ImageView {
         if (imageGenerator == null) {
             throw new IllegalArgumentException("ImageGenerator cannot be null");
         }
-        
+
         /*
          * Height of the widget
          */
@@ -139,7 +139,7 @@ public class ZoomableImageView extends ImageView {
          */
         this.currentImageWidth = width;
         this.currentImageHeight = height;
-        
+
         this.imageGenerator = imageGenerator;
 
         /*
@@ -164,6 +164,21 @@ public class ZoomableImageView extends ImageView {
         maxX = maxXBound;
         maxY = maxYBound;
 
+        double widgetRatio = ((double) width) / height;
+        double viewportRatio = (maxX - minX) / (maxY - minY);
+
+        if (widgetRatio < viewportRatio) {
+            double desiredViewportWidth = widgetRatio * (maxY - minY);
+            double midpoint = (minX + maxX) / 2.0;
+            minX = midpoint - desiredViewportWidth / 2.0;
+            maxX = midpoint + desiredViewportWidth / 2.0;
+        } else if (viewportRatio < widgetRatio) {
+            double desiredViewportHeight = (maxX - minX) / widgetRatio;
+            double midpoint = (minY + maxY) / 2.0;
+            minY = midpoint - desiredViewportHeight / 2.0;
+            maxY = midpoint + desiredViewportHeight / 2.0;
+        }
+
         /*
          * Set initial border values to image bounds
          */
@@ -171,15 +186,14 @@ public class ZoomableImageView extends ImageView {
         minYBorder = minY;
         maxXBorder = maxX;
         maxYBorder = maxY;
-        
-        
+
         /*
          * Now generate the initial image to be displayed
          */
         setImage(SwingFXUtils.toFXImage(
                 imageGenerator.generateImage(minX, minY, maxX, maxY, width, height), null));
         setViewport(new Rectangle2D(0, 0, width, height));
-        
+
         /*
          * Add handlers for mouse events
          */
@@ -297,6 +311,14 @@ public class ZoomableImageView extends ImageView {
          */
         double finalWidthX = widthX / factor;
         double finalWidthY = widthY / factor;
+        
+        double imageFactor = ((double)width)/height;
+        double zoomedFactor = finalWidthX/finalWidthY;
+        if(imageFactor > zoomedFactor) {
+            finalWidthY = finalWidthX / imageFactor;
+        } else if(zoomedFactor > imageFactor) {
+            finalWidthX = finalWidthY * imageFactor;
+        }
 
         /*
          * How much to shift each side (min/max) by (relatively)
@@ -440,7 +462,7 @@ public class ZoomableImageView extends ImageView {
         setViewport(new Rectangle2D(xoff, yoff, (currentImageWidth * xfactor),
                 (currentImageHeight * yfactor)));
     }
-    
+
     /**
      * Updates the image by requesting a new one from the {@link ImageGenerator}
      * The new image will have a border up to the size of the image on all sides
@@ -455,7 +477,7 @@ public class ZoomableImageView extends ImageView {
 //
 //        minYBorder = 2 * minY - maxY;
 //        maxYBorder = 2 * maxY - minY;
-        
+
         minXBorder = minX;
         minYBorder = minY;
         maxXBorder = maxX;
@@ -485,9 +507,10 @@ public class ZoomableImageView extends ImageView {
          * Generate a new BufferedImage and convert it to a WritableImage for
          * display.
          */
-        if(imageGenerator != null) {
+        if (imageGenerator != null) {
             WritableImage fxImage = SwingFXUtils.toFXImage(imageGenerator.generateImage(minXBorder,
-                    minYBorder, maxXBorder, maxYBorder, currentImageWidth, currentImageHeight), null);
+                    minYBorder, maxXBorder, maxYBorder, currentImageWidth, currentImageHeight),
+                    null);
             double xoff = (minX - minXBorder) * width / (maxX - minX);
             double yoff = (maxYBorder - maxY) * (height) / (maxY - minY);
             setImage(fxImage);

@@ -38,6 +38,7 @@ public class CompositeMaskPlugin extends VariablePlugin {
 
     public static final String COMPOSITEMASK = "composite-mask"; 
     private boolean noMaskSet = true;
+    private VariableMetadata compositeMeta;
     
     public CompositeMaskPlugin(String... composites) {
         super(composites, new String[] { "mask" });
@@ -46,10 +47,10 @@ public class CompositeMaskPlugin extends VariablePlugin {
     @Override
     protected VariableMetadata[] doProcessVariableMetadata(VariableMetadata... metadata)
             throws EdalException {
-        VariableMetadata diffMeta = newVariableMetadataFromMetadata(new Parameter(
+        compositeMeta = newVariableMetadataFromMetadata(new Parameter(
                 getFullId("mask"), "Composite mask", "Composite mask", "0: unmasked, 1: masked",
                 null), true, metadata);
-        return new VariableMetadata[] { diffMeta };
+        return new VariableMetadata[] { compositeMeta };
     }
 
     @Override
@@ -77,5 +78,11 @@ public class CompositeMaskPlugin extends VariablePlugin {
         } else {
             noMaskSet = true;
         }
+        StringBuilder mComps = new StringBuilder();
+        for(String comp : this.uses) {
+            mComps.append(comp+",");
+        }
+        mComps.deleteCharAt(mComps.length()-1);
+        compositeMeta.getVariableProperties().put("mask_components", mComps.toString());
     }
 }

@@ -31,6 +31,7 @@ package uk.ac.rdg.resc.cloudmask;
 import java.awt.Color;
 import java.io.IOException;
 
+import uk.ac.rdg.resc.cloudmask.CloudMaskDatasetFactory.MaskedDataset;
 import uk.ac.rdg.resc.edal.domain.Extent;
 import uk.ac.rdg.resc.edal.exceptions.EdalException;
 import uk.ac.rdg.resc.edal.graphics.style.ColourScale;
@@ -42,12 +43,12 @@ import uk.ac.rdg.resc.edal.graphics.style.util.SimpleFeatureCatalogue;
 public class CompositeMaskEdalImageGenerator extends EdalImageGenerator {
     private Color maskColor = new Color(0, 0, 0, 150);
 
-    public CompositeMaskEdalImageGenerator(String var, SimpleFeatureCatalogue<?> catalogue)
+    public CompositeMaskEdalImageGenerator(String var, SimpleFeatureCatalogue<MaskedDataset> catalogue)
             throws IOException, EdalException {
-        this(var, catalogue, GraphicsUtils.estimateValueRange(catalogue.getDataset(), var));
+        this(var, catalogue, catalogue.getDataset().getCurrentScaleRange(var));
     }
 
-    public CompositeMaskEdalImageGenerator(String var, SimpleFeatureCatalogue<?> catalogue,
+    public CompositeMaskEdalImageGenerator(String var, SimpleFeatureCatalogue<MaskedDataset> catalogue,
             Extent<Float> scaleRange) throws IOException, EdalException {
         super(var, catalogue, scaleRange);
         

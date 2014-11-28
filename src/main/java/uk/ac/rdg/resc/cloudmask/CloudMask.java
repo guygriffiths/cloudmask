@@ -28,19 +28,27 @@
 
 package uk.ac.rdg.resc.cloudmask;
 
-import java.util.Set;
+import java.io.IOException;
+import java.util.Properties;
+
+import org.controlsfx.control.RangeSlider;
+import org.junit.internal.runners.model.MultipleFailureException;
 
 import javafx.application.Application;
+import javafx.event.ActionEvent;
+import javafx.event.EventHandler;
 import javafx.scene.Scene;
+import javafx.scene.control.Button;
 import javafx.scene.layout.GridPane;
 import javafx.stage.Stage;
-import uk.ac.rdg.resc.cloudmask.MaskedDatasetFactory.MaskedDataset;
-import uk.ac.rdg.resc.edal.dataset.cdm.NativeCdmGridDatasetFactory;
+import uk.ac.rdg.resc.cloudmask.CloudMaskDatasetFactory.MaskedDataset;
 import uk.ac.rdg.resc.edal.exceptions.EdalException;
+import uk.ac.rdg.resc.edal.graphics.style.util.GraphicsUtils;
 import uk.ac.rdg.resc.edal.graphics.style.util.SimpleFeatureCatalogue;
-import uk.ac.rdg.resc.edal.metadata.VariableMetadata;
 
 public class CloudMask extends Application {
+
+    private MaskedDataset dataset;
 
     public static void main(String[] args) {
         launch(args);
@@ -50,32 +58,73 @@ public class CloudMask extends Application {
     public void start(Stage primaryStage) throws Exception {
         primaryStage.setTitle("Cloud Masker");
 
-        GridPane grid = new GridPane();
+        Properties settings = new Properties();
+        settings.load(getClass().getResourceAsStream("/cloudmask.properties"));
+        String rowsStr = settings.getProperty("rows", "2");
+        String colsStr = settings.getProperty("columns", "2");
+        String widthStr = settings.getProperty("imageWidth", "512");
+        String heightStr = settings.getProperty("imageHeight", "512");
 
-        MaskedDatasetFactory mdf = new MaskedDatasetFactory(new NativeCdmGridDatasetFactory());
-        MaskedDataset dataset = mdf.createDataset("test", "/home/guy/test_file.nc");
-        Set<String> variableIds = dataset.getVariableIds();
-        VariableMetadata comparison = null;
-        for (String var : variableIds) {
-            VariableMetadata metadata = dataset.getVariableMetadata(var);
-            if (comparison == null) {
-                comparison = metadata;
-            } else {
-                if (!comparison.getHorizontalDomain().equals(metadata.getHorizontalDomain())) {
-                    throw new EdalException(
-                            "Currently all variables in the dataset must share the same horizontal domain");
-                }
+        int nRows = 2;
+        try {
+            nRows = Integer.parseInt(rowsStr);
+        } catch (NumberFormatException e) {
+        }
+        if(nRows < 2) {
+            /*
+             * We need at least 2 rows for the composite and the settings panel.
+             * 
+             * TODO allow a single row and change the layout
+             */
+            nRows = 2;
+        }
+        
+        int nCols = 2;
+        try {
+            nCols = Integer.parseInt(colsStr);
+        } catch (NumberFormatException e) {
+        }
+        
+        int width = 512;
+        try {
+            width = Integer.parseInt(widthStr);
+        } catch (NumberFormatException e) {
+        }
+        
+        int height = 512;
+        try {
+            height = Integer.parseInt(heightStr);
+        } catch (NumberFormatException e) {
+        }
+        
+        GridPane grid = new GridPane();
+        CompositeMaskPane comp = new CompositeMaskPane(null, width, height);
+        int col = 0;
+        for(int row = 0;row<nRows;row++) {
+            for(col = 0;col<nCols;col++) {
+                grid.add(new MaskingPane(width, height, comp), col, row);
             }
         }
+        grid.add(comp, col, 0);
 
-        SimpleFeatureCatalogue<MaskedDataset> catalogue = new SimpleFeatureCatalogue<>(dataset,
-                true);
+        Button button = new Button("Press me!");
+        button.setOnAction(new EventHandler<ActionEvent>() {
+            @Override
+            public void handle(ActionEvent event) {
+                try {
+                    CloudMaskDatasetFactory mdf = new CloudMaskDatasetFactory();
+                    dataset = mdf.createDataset("test", "/home/guy/test_file.nc");
+                    SimpleFeatureCatalogue<MaskedDataset> catalogue = new SimpleFeatureCatalogue<>(
+                            dataset, true);
+                    comp.setCatalogue(catalogue);
+                } catch (EdalException | IOException e) {
+                    // TODO Auto-generated catch block
+                    e.printStackTrace();
+                }
+            }
+        });
+        grid.add(button, col, 1);
 
-        CompositeMaskPane comp = new CompositeMaskPane(catalogue, 512, 512);
-
-        grid.add(new MaskingPane(catalogue, 512, 512, comp), 0, 0);
-        grid.add(comp, 0, 1);
-//        
 //        VariablePlugin diffPlugin = new NormalisedDiffPlugin("btemp_nadir_1100", "btemp_nadir_1200");
 //
 //        Button button = new Button("Press me!");
@@ -96,7 +145,15 @@ public class CloudMask extends Application {
 //        grid.add(view3, 1, 1);
 //        grid.add(view4, 1, 0);
 
-        primaryStage.setScene(new Scene(grid, 300, 250));
+        Scene scene = new Scene(grid, 300, 250);
+        scene.getStylesheets().add(getClass().getResource("/colourbar.css").toExternalForm());
+        primaryStage.setScene(scene);
         primaryStage.show();
+    }
+
+    @Override
+    public void stop() throws Exception {
+        super.stop();
+//        CloudMaskDatasetFactory.writeDataset(dataset, "/home/guy/outputtest.nc");
     }
 }

@@ -28,40 +28,65 @@
 
 package uk.ac.rdg.resc.cloudmask;
 
+import java.awt.Color;
+
 import uk.ac.rdg.resc.edal.dataset.plugins.VariablePlugin;
+import uk.ac.rdg.resc.edal.domain.Extent;
 import uk.ac.rdg.resc.edal.exceptions.EdalException;
 import uk.ac.rdg.resc.edal.metadata.GridVariableMetadata;
 import uk.ac.rdg.resc.edal.metadata.Parameter;
 import uk.ac.rdg.resc.edal.metadata.VariableMetadata;
 import uk.ac.rdg.resc.edal.position.HorizontalPosition;
 
-class NormalisedDiffPlugin extends VariablePlugin {
+public class RgbFalseColourPlugin extends VariablePlugin {
+    public static final String RGB = "rgb";
+    private Extent<Float> rScaleRange;
+    private Extent<Float> gScaleRange;
+    private Extent<Float> bScaleRange;
 
-    private static final String DIFFNORMAL = "diffnormal";
-
-    public NormalisedDiffPlugin(String xVar, String yVar) {
-        super(new String[] { xVar, yVar }, new String[] { DIFFNORMAL });
+    public RgbFalseColourPlugin(String rVar, String gVar, String bVar, Extent<Float> rScaleRange,
+            Extent<Float> gScaleRange, Extent<Float> bScaleRange) {
+        super(new String[] { rVar, gVar, bVar }, new String[] { RGB });
+        this.rScaleRange = rScaleRange;
+        this.gScaleRange = gScaleRange;
+        this.bScaleRange = bScaleRange;
     }
 
     @Override
     protected VariableMetadata[] doProcessVariableMetadata(VariableMetadata... metadata)
             throws EdalException {
-        GridVariableMetadata xMeta = (GridVariableMetadata) metadata[0];
-        GridVariableMetadata yMeta = (GridVariableMetadata) metadata[1];
+        GridVariableMetadata rMeta = (GridVariableMetadata) metadata[0];
+        GridVariableMetadata gMeta = (GridVariableMetadata) metadata[1];
+        GridVariableMetadata bMeta = (GridVariableMetadata) metadata[2];
 
-        VariableMetadata diffMeta = newVariableMetadataFromMetadata(new Parameter(
-                getFullId(DIFFNORMAL), "Normalised (" + xMeta.getParameter().getTitle() + " - "
-                        + yMeta.getParameter().getTitle() + ")",
-                "Normalised difference between variables " + xMeta.getParameter().getTitle()
-                        + " and " + yMeta.getParameter().getTitle(), xMeta.getParameter()
-                        .getUnits(), null), true, xMeta, yMeta);
-        diffMeta.setParent(xMeta.getParent(), null);
-        return new VariableMetadata[] { diffMeta };
+        VariableMetadata rgbMeta = newVariableMetadataFromMetadata(new Parameter(getFullId(RGB),
+                "RGB False Colour Image", "False colour image using variables R: " + rMeta.getId()
+                        + ", G: " + gMeta.getId() + ", B: " + bMeta.getId(), "rgbint", null), true,
+                rMeta, gMeta, bMeta);
+        rgbMeta.setParent(rMeta.getParent(), null);
+        return new VariableMetadata[] { rgbMeta };
     }
 
     @Override
     protected Number generateValue(String varSuffix, HorizontalPosition pos, Number... sourceValues) {
-        return (sourceValues[0].doubleValue() - sourceValues[1].doubleValue())
-                / (sourceValues[0].doubleValue() + sourceValues[1].doubleValue());
+        float r = (sourceValues[0].floatValue() - rScaleRange.getLow())
+                / (rScaleRange.getHigh() - rScaleRange.getLow());
+        if (r < 0.0)
+            r = 0.0f;
+        if (r > 1.0)
+            r = 1.0f;
+        float g = (sourceValues[1].floatValue() - gScaleRange.getLow())
+                / (gScaleRange.getHigh() - gScaleRange.getLow());
+        if (g < 0.0)
+            g = 0.0f;
+        if (g > 1.0)
+            g = 1.0f;
+        float b = (sourceValues[2].floatValue() - bScaleRange.getLow())
+                / (bScaleRange.getHigh() - bScaleRange.getLow());
+        if (b < 0.0)
+            b = 0.0f;
+        if (b > 1.0)
+            b = 1.0f;
+        return new Color(r, g, b).getRGB();
     }
 }

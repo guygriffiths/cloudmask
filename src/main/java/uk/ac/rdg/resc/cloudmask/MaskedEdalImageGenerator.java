@@ -31,6 +31,7 @@ package uk.ac.rdg.resc.cloudmask;
 import java.awt.Color;
 import java.io.IOException;
 
+import uk.ac.rdg.resc.cloudmask.CloudMaskDatasetFactory.MaskedDataset;
 import uk.ac.rdg.resc.edal.domain.Extent;
 import uk.ac.rdg.resc.edal.exceptions.EdalException;
 import uk.ac.rdg.resc.edal.graphics.style.ColourScale;
@@ -43,12 +44,12 @@ public class MaskedEdalImageGenerator extends EdalImageGenerator {
     private Color maskColor = new Color(0, 0, 0, 150);
     private RasterLayer threshold;
 
-    public MaskedEdalImageGenerator(String var, SimpleFeatureCatalogue<?> catalogue)
+    public MaskedEdalImageGenerator(String var, SimpleFeatureCatalogue<MaskedDataset> catalogue)
             throws IOException, EdalException {
         this(var, catalogue, GraphicsUtils.estimateValueRange(catalogue.getDataset(), var));
     }
 
-    public MaskedEdalImageGenerator(String var, SimpleFeatureCatalogue<?> catalogue,
+    public MaskedEdalImageGenerator(String var, SimpleFeatureCatalogue<MaskedDataset> catalogue,
             Extent<Float> scaleRange) throws IOException, EdalException {
         super(var, catalogue, scaleRange);
         setRasterLayer(var);
@@ -62,7 +63,7 @@ public class MaskedEdalImageGenerator extends EdalImageGenerator {
     }
     
     private void setRasterLayer(String var) {
-        threshold = new RasterLayer(var + "-" + MaskedDatasetFactory.MASK_SUFFIX,
+        threshold = new RasterLayer(var + "-" + CloudMaskDatasetFactory.MASK_SUFFIX,
                 new SegmentColourScheme(new ColourScale(0f, 1f, false), null, null, null,
                         "#00000000,"+GraphicsUtils.colourToString(maskColor), 2));
         image.getLayers().add(threshold);

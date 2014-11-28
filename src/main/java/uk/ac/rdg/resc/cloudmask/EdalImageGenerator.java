@@ -30,13 +30,16 @@ package uk.ac.rdg.resc.cloudmask;
 
 import java.awt.image.BufferedImage;
 import java.io.IOException;
+import java.util.Map;
 
+import uk.ac.rdg.resc.cloudmask.CloudMaskDatasetFactory.MaskedDataset;
 import uk.ac.rdg.resc.cloudmask.ZoomableImageView.ImageGenerator;
 import uk.ac.rdg.resc.edal.domain.Extent;
 import uk.ac.rdg.resc.edal.exceptions.EdalException;
 import uk.ac.rdg.resc.edal.geometry.BoundingBoxImpl;
 import uk.ac.rdg.resc.edal.graphics.style.ColourScale;
 import uk.ac.rdg.resc.edal.graphics.style.MapImage;
+import uk.ac.rdg.resc.edal.graphics.style.RGBColourScheme;
 import uk.ac.rdg.resc.edal.graphics.style.RasterLayer;
 import uk.ac.rdg.resc.edal.graphics.style.SegmentColourScheme;
 import uk.ac.rdg.resc.edal.graphics.style.util.GraphicsUtils;
@@ -48,16 +51,18 @@ public class EdalImageGenerator implements ImageGenerator {
     private final int xSize;
     private final int ySize;
     protected MapImage image;
-    protected SimpleFeatureCatalogue<?> catalogue;
+    protected SimpleFeatureCatalogue<MaskedDataset> catalogue;
     protected Extent<Float> scaleRange;
     private RasterLayer rasterLayer;
+    private String varName;
+    private String palette;
 
-    public EdalImageGenerator(String var, SimpleFeatureCatalogue<?> catalogue) throws IOException,
+    public EdalImageGenerator(String var, SimpleFeatureCatalogue<MaskedDataset> catalogue) throws IOException,
             EdalException {
         this(var, catalogue, GraphicsUtils.estimateValueRange(catalogue.getDataset(), var));
     }
 
-    public EdalImageGenerator(String var, SimpleFeatureCatalogue<?> catalogue,
+    public EdalImageGenerator(String var, SimpleFeatureCatalogue<MaskedDataset> catalogue,
             Extent<Float> scaleRange) throws IOException, EdalException {
         GridVariableMetadata variableMetadata = (GridVariableMetadata) catalogue.getDataset()
                 .getVariableMetadata(var);
@@ -65,14 +70,16 @@ public class EdalImageGenerator implements ImageGenerator {
         ySize = variableMetadata.getHorizontalDomain().getYSize();
         this.catalogue = catalogue;
         this.scaleRange = scaleRange;
+        this.palette = "seq-cubeYF";
         rasterLayer = new RasterLayer(var, new SegmentColourScheme(new ColourScale(scaleRange,
-                false), null, null, null, "seq-cubeYF", 250));
+                false), null, null, null, palette, 250));
         image = new MapImage();
         image.getLayers().add(rasterLayer);
+        this.varName = var;
     }
-    
+
     public void setVariable(String var) throws EdalException {
-        this.setVariable(var, GraphicsUtils.estimateValueRange(catalogue.getDataset(), var));
+        this.setVariable(var, catalogue.getDataset().getCurrentScaleRange(var));
     }
 
     public void setVariable(String var, Extent<Float> scaleRange) throws EdalException {
@@ -85,11 +92,32 @@ public class EdalImageGenerator implements ImageGenerator {
         }
         this.scaleRange = scaleRange;
         image.getLayers().remove(rasterLayer);
-        rasterLayer = new RasterLayer(var, new SegmentColourScheme(new ColourScale(scaleRange,
-                false), null, null, null, "seq-cubeYF", 250));
+        if ("rgbint".equals(variableMetadata.getParameter().getUnits())) {
+            rasterLayer = new RasterLayer(var, new RGBColourScheme());
+        } else {
+            rasterLayer = new RasterLayer(var, new SegmentColourScheme(new ColourScale(scaleRange,
+                    false), null, null, null, palette, 250));
+        }
         image.getLayers().add(0, rasterLayer);
     }
 
+    public void setPalette(String palette) {
+        this.palette = palette;
+        image.getLayers().remove(rasterLayer);
+        rasterLayer = new RasterLayer(varName, new SegmentColourScheme(new ColourScale(scaleRange,
+                false), null, null, null, palette, 250));
+        image.getLayers().add(0, rasterLayer);
+    }
+    
+    public void setScaleRange(Extent<Float> scaleRange) {
+        System.out.println("Scale range changed to "+scaleRange);
+        this.scaleRange = scaleRange;
+        image.getLayers().remove(rasterLayer);
+        rasterLayer = new RasterLayer(varName, new SegmentColourScheme(new ColourScale(scaleRange,
+                false), null, null, null, palette, 250));
+        image.getLayers().add(0, rasterLayer);
+    }
+    
     public Extent<Float> getScaleRange() {
         return scaleRange;
     }
@@ -103,29 +131,38 @@ public class EdalImageGenerator implements ImageGenerator {
             BufferedImage drawImage = image.drawImage(params, catalogue);
             return drawImage;
         } catch (EdalException e) {
+            /*
+             * TODO handle better
+             */
             e.printStackTrace();
             return null;
         }
     }
 
+    public BufferedImage getLegend(int size, float fracOutOfRangeLow, float fracOutOfRangeHigh,
+            boolean vertical) {
+        return rasterLayer.getColourScheme().getScaleBar(1, size, fracOutOfRangeLow,
+                fracOutOfRangeHigh, vertical, false, null, null);
+    }
+
     @Override
     public double getMinValidX() {
-        return 0;
+        return -0.5;
     }
 
     @Override
     public double getMaxValidX() {
-        return xSize - 1;
+        return xSize - 0.5;
     }
 
     @Override
     public double getMinValidY() {
-        return 0;
+        return -0.5;
     }
 
     @Override
     public double getMaxValidY() {
-        return ySize - 1;
+        return ySize - 0.5;
     }
 
 }
