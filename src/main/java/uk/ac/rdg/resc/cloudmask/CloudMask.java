@@ -114,6 +114,7 @@ public class CloudMask extends Application {
             @Override
             public void handle(ActionEvent event) {
                 try {
+//                    controller.loadDataset("c:/Users/Guy/test_file.nc");
                     controller.loadDataset("/home/guy/test_file.nc");
                 } catch (EdalException | IOException e) {
                     e.printStackTrace();

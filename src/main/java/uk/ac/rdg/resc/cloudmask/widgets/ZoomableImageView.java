@@ -37,9 +37,7 @@ import javafx.event.EventHandler;
 import javafx.geometry.Rectangle2D;
 import javafx.scene.image.ImageView;
 import javafx.scene.image.WritableImage;
-import javafx.scene.input.MouseButton;
-import javafx.scene.input.MouseEvent;
-import javafx.scene.input.ScrollEvent;
+import javafx.scene.input.*;
 
 /**
  * A class to provide an {@link ImageView} which is smoothly zoomable,
@@ -110,6 +108,7 @@ public class ZoomableImageView extends ImageView {
      * image regeneration.
      */
     private Task<Boolean> regenerationTask = null;
+    private int touchCount = 0;
 
     /**
      * Constructs a new {@link ZoomableImageView}
@@ -194,26 +193,78 @@ public class ZoomableImageView extends ImageView {
                 imageGenerator.generateImage(minX, minY, maxX, maxY, width, height), null));
         setViewport(new Rectangle2D(0, 0, width, height));
 
+        setOnTouchPressed(new EventHandler<TouchEvent>() {
+            @Override
+            public void handle(TouchEvent event) {
+                touchCount = event.getTouchPoints().size();
+            }
+        });
+
+        setOnTouchReleased(new EventHandler<TouchEvent>() {
+            @Override
+            public void handle(TouchEvent event) {
+                touchCount = event.getTouchPoints().size()-1;
+            }
+        });
+
+        setOnZoomStarted(new EventHandler<ZoomEvent>() {
+            @Override
+            public void handle(ZoomEvent event) {
+                cancelRegeneration();
+            }
+        });
+
+        setOnZoom(new EventHandler<ZoomEvent>() {
+            @Override
+            public void handle(ZoomEvent event) {
+                doPixelZoom(event.getZoomFactor(), event.getX(), event.getY());
+                updateImageQuick();
+            }
+        });
+
+        setOnZoomFinished(new EventHandler<ZoomEvent>() {
+            @Override
+            public void handle(ZoomEvent event) {
+                regenerateImageIn(500L);
+            }
+        });
+
         /*
          * Add handlers for mouse events
          */
         setOnScroll(new EventHandler<ScrollEvent>() {
             @Override
             public void handle(ScrollEvent event) {
-                /*
-                 * Adjust zoom by a constant factor per scroll wheel click
-                 */
-                if (event.getDeltaY() > 0) {
-                    doPixelZoom(1.1, event.getX(), event.getY());
-                } else {
-                    doPixelZoom(1 / 1.1, event.getX(), event.getY());
-                }
+                if (touchCount == 2) {
+                    /*
+                     * We have a touch scroll event, which should be treated as
+                     * a pan if done with 2 fingers
+                     */
+                    if(!event.isInertia()) {
+                        doPixelDrag(event.getDeltaX(), -event.getDeltaY());
+                        updateImageQuick();
+                    }
+                } else
+                if(touchCount == 0 && !event.isInertia()) {
+                    /*
+                     * We have a mouse scroll event, which should be treated as
+                     * a zoom
+                     */
+                    /*
+                     * Adjust zoom by a constant factor per scroll wheel click
+                     */
+                    if (event.getDeltaY() > 0) {
+                        doPixelZoom(1.1, event.getX(), event.getY());
+                    } else {
+                        doPixelZoom(1 / 1.1, event.getX(), event.getY());
+                    }
 
-                /*
-                 * Now update the image based on the new limits
-                 */
-                updateImageQuick();
-                regenerateImageIn(500L);
+                    /*
+                     * Now update the image based on the new limits
+                     */
+                    updateImageQuick();
+                    regenerateImageIn(500L);
+                }
             }
         });
 
@@ -236,7 +287,7 @@ public class ZoomableImageView extends ImageView {
                  * Process the drag by moving the image (without regenerating
                  * it)
                  */
-                if (event.getButton() == MouseButton.PRIMARY) {
+                if (touchCount==0 && event.getButton() == MouseButton.PRIMARY) {
                     double offsetX = (event.getX() - lastDragX);
                     double offsetY = (event.getY() - lastDragY);
                     lastDragX = event.getX();
@@ -311,12 +362,12 @@ public class ZoomableImageView extends ImageView {
          */
         double finalWidthX = widthX / factor;
         double finalWidthY = widthY / factor;
-        
-        double imageFactor = ((double)width)/height;
-        double zoomedFactor = finalWidthX/finalWidthY;
-        if(imageFactor > zoomedFactor) {
+
+        double imageFactor = ((double) width) / height;
+        double zoomedFactor = finalWidthX / finalWidthY;
+        if (imageFactor > zoomedFactor) {
             finalWidthY = finalWidthX / imageFactor;
-        } else if(zoomedFactor > imageFactor) {
+        } else if (zoomedFactor > imageFactor) {
             finalWidthX = finalWidthY * imageFactor;
         }
 
@@ -380,9 +431,7 @@ public class ZoomableImageView extends ImageView {
      *            The length of the timer in ms
      */
     private void regenerateImageIn(long delay) {
-        if (regenerationTask != null) {
-            regenerationTask.cancel();
-        }
+        cancelRegeneration();
         regenerationTask = new Task<Boolean>() {
             @Override
             protected Boolean call() throws Exception {
@@ -397,6 +446,12 @@ public class ZoomableImageView extends ImageView {
             }
         });
         new Thread(regenerationTask).start();
+    }
+
+    private void cancelRegeneration() {
+        if (regenerationTask != null) {
+            regenerationTask.cancel();
+        }
     }
 
     /**
@@ -469,14 +524,14 @@ public class ZoomableImageView extends ImageView {
      * to allow for dragging
      */
     public void updateImage() {
-//        /*
-//         * Generate an image with a border around it to allow for smooth panning
-//         */
-//        minXBorder = 2 * minX - maxX;
-//        maxXBorder = 2 * maxX - minX;
-//
-//        minYBorder = 2 * minY - maxY;
-//        maxYBorder = 2 * maxY - minY;
+        /*
+         * Generate an image with a border around it to allow for smooth panning
+         */
+        minXBorder = 2 * minX - maxX;
+        maxXBorder = 2 * maxX - minX;
+
+        minYBorder = 2 * minY - maxY;
+        maxYBorder = 2 * maxY - minY;
 
         minXBorder = minX;
         minYBorder = minY;

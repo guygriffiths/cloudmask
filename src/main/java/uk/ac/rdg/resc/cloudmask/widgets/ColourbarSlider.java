@@ -29,8 +29,6 @@
 package uk.ac.rdg.resc.cloudmask.widgets;
 
 import java.awt.image.BufferedImage;
-import java.io.File;
-import java.io.IOException;
 
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
@@ -39,8 +37,6 @@ import javafx.geometry.Orientation;
 import javafx.scene.image.WritableImage;
 import javafx.scene.layout.Background;
 import javafx.scene.layout.BackgroundImage;
-
-import javax.imageio.ImageIO;
 
 import org.controlsfx.control.RangeSlider;
 
@@ -112,11 +108,6 @@ public class ColourbarSlider extends RangeSlider {
             float aboveMax = (float) ((getMax() - getHighValue()) / range);
             BufferedImage legend = imageGenerator.getLegend((int) getHeight(), belowMin, aboveMax,
                     orientation == Orientation.VERTICAL);
-            try {
-                ImageIO.write(legend, "png", new File("/home/guy/test.png"));
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
             WritableImage fxImage = SwingFXUtils.toFXImage(legend, null);
             setBackground(new Background(new BackgroundImage(fxImage, null, null, null, null)));
         }
