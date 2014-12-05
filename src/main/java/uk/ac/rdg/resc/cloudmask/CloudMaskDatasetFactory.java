@@ -88,7 +88,6 @@ import uk.ac.rdg.resc.edal.metadata.VariableMetadata;
 import uk.ac.rdg.resc.edal.position.HorizontalPosition;
 import uk.ac.rdg.resc.edal.util.Array4D;
 import uk.ac.rdg.resc.edal.util.Extents;
-import uk.ac.rdg.resc.edal.util.GISUtils;
 import uk.ac.rdg.resc.edal.util.cdm.CdmUtils;
 
 /**
@@ -182,7 +181,6 @@ public final class CloudMaskDatasetFactory extends DatasetFactory {
     public final class MaskedDataset extends AbstractGridDataset {
         private final String location;
         private final DataReadingStrategy dataReadingStrategy;
-        private Map<String, Extent<Float>> scaleRanges;
         private Map<String, ThresholdMaskPlugin> thresholds;
         private ObservableList<String> unmaskedVariables;
 
@@ -194,7 +192,6 @@ public final class CloudMaskDatasetFactory extends DatasetFactory {
             this.location = location;
             this.dataReadingStrategy = dataReadingStrategy;
 
-            scaleRanges = new HashMap<>();
             thresholds = new HashMap<>();
             unmaskedVariables = FXCollections.observableArrayList(getVariableIds());
 
@@ -213,20 +210,6 @@ public final class CloudMaskDatasetFactory extends DatasetFactory {
              */
             compositePlugin = new CompositeMaskPlugin(allVars);
             super.addVariablePlugin(compositePlugin);
-        }
-
-        public Extent<Float> getCurrentScaleRange(String var) {
-            if(scaleRanges.containsKey(var)) {
-                return scaleRanges.get(var);
-            } else {
-                Extent<Float> valueRange = GraphicsUtils.estimateValueRange(this, var);
-                scaleRanges.put(var, valueRange);
-                return valueRange;
-            }
-        }
-        
-        public void setCurrentScaleRange(String var, Extent<Float> range) {
-            scaleRanges.put(var, range);
         }
 
         @Override
@@ -262,7 +245,14 @@ public final class CloudMaskDatasetFactory extends DatasetFactory {
             thresholds.get(varId).setThresholdInclusive(inclusive);
         }
 
+        public boolean isMaskThresholdInclusive(String varId) {
+            return thresholds.get(varId).inclusive;
+        }
+        
         public void setMaskedVariables(String... vars) {
+            for(String v : vars) {
+                System.out.println(v+" added to mask");
+            }
             compositePlugin.setMasks(vars);
         }
 

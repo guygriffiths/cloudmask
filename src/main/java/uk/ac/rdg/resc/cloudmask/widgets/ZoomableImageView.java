@@ -26,7 +26,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  ******************************************************************************/
 
-package uk.ac.rdg.resc.cloudmask;
+package uk.ac.rdg.resc.cloudmask.widgets;
 
 import java.awt.image.BufferedImage;
 
@@ -72,33 +72,33 @@ public class ZoomableImageView extends ImageView {
     private double lastDragY;
 
     /** The current minimum visible x co-ordinate */
-    private double minX;
+    protected double minX;
     /** The current minimum visible y co-ordinate */
-    private double minY;
+    protected double minY;
     /** The current maximum visible x co-ordinate */
-    private double maxX;
+    protected double maxX;
     /** The current maximum visible y co-ordinate */
-    private double maxY;
+    protected double maxY;
     /**
      * The current minimum x co-ordinate generated in the image (to allow
      * dragging)
      */
-    private double minXBorder;
+    protected double minXBorder;
     /**
      * The current minimum y co-ordinate generated in the image (to allow
      * dragging)
      */
-    private double minYBorder;
+    protected double minYBorder;
     /**
      * The current maximum x co-ordinate generated in the image (to allow
      * dragging)
      */
-    private double maxXBorder;
+    protected double maxXBorder;
     /**
      * The current maximum y co-ordinate generated in the image (to allow
      * dragging)
      */
-    private double maxYBorder;
+    protected double maxYBorder;
 
     /** The width of the currently generated image */
     private int currentImageWidth;

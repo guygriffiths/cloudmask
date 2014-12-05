@@ -26,11 +26,11 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  ******************************************************************************/
 
-package uk.ac.rdg.resc.cloudmask;
+package uk.ac.rdg.resc.cloudmask.widgets;
 
 import java.awt.image.BufferedImage;
 
-import uk.ac.rdg.resc.cloudmask.ZoomableImageView.ImageGenerator;
+import uk.ac.rdg.resc.cloudmask.widgets.ZoomableImageView.ImageGenerator;
 import uk.ac.rdg.resc.edal.graphics.style.util.ColourPalette;
 
 public class JuliaImageGenerator implements ImageGenerator {

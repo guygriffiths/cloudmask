@@ -26,68 +26,70 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  ******************************************************************************/
 
-package uk.ac.rdg.resc.cloudmask;
+package uk.ac.rdg.resc.cloudmask.widgets;
 
+import java.awt.Color;
+import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
 
-import uk.ac.rdg.resc.cloudmask.ZoomableImageView.ImageGenerator;
-import uk.ac.rdg.resc.edal.graphics.style.util.ColourPalette;
+import uk.ac.rdg.resc.cloudmask.widgets.ZoomableImageView.ImageGenerator;
 
-public class MandelbrotImageGenerator implements ImageGenerator {
-    
-    private ColourPalette palette;
-
-    public MandelbrotImageGenerator() {
-        this("default");
-    }
-    
-    public MandelbrotImageGenerator(String paletteName) {
-        palette = ColourPalette.fromString(paletteName, 250);
-    }
-    
+public class TestImageGenerator implements ImageGenerator {
     @Override
     public BufferedImage generateImage(double minX, double minY, double maxX, double maxY,
             int width, int height) {
+//        try {
+//            Thread.sleep(500L);
+//        } catch (InterruptedException e) {
+//            e.printStackTrace();
+//        }
         BufferedImage image = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
-        
-        for(int i=0;i<width; i++) {
-            double x = minX + i*(maxX-minX)/width;
-            for(int j=0;j<height; j++) {
-                double y = minY + (height - 1 - j)*(maxY-minY)/height;
-                int iterations = 0;
-                double xp = x;
-                double yp = y;
-                while( xp * xp + yp * yp < 4 && iterations < 250) {
-                    double xtemp = xp*xp - yp*yp + x;
-                    yp = 2 * xp*yp + y;
-                    xp = xtemp;
-                    iterations++;
+        for (int i = 0; i < width; i++) {
+            float percentageAlongX = (float) (minX + i * (maxX - minX) / (width - 1));
+            for (int j = 0; j < height; j++) {
+                float percentageAlongY = (float) (minY + j * (maxY - minY) / height);
+                if (percentageAlongX <= 100 && percentageAlongX >= 0 && percentageAlongY <= 100
+                        && percentageAlongY >= 0) {
+                    int rgb = new Color(25 * (int) (percentageAlongX / 10.0f), 0,
+                            25 * (int) (percentageAlongY / 10.0f)).getRGB();
+                    image.setRGB(i, height-j-1, rgb);
+                } else {
+                    image.setRGB(i, j, 0);
                 }
-                image.setRGB(i, j, palette.getColor((float) (iterations / 250.0)).getRGB());
             }
         }
         
+        Graphics2D g = image.createGraphics();
+        String ll = (int)(minX + (maxX - minX/4.0)) + ","+ (int)(minY + (maxY - minY/4.0));
+        g.drawString(ll, width/4, 3*height/4);
+        String lr = (int)(minX + 3*(maxX - minX/4.0)) + ","+ (int)(minY + (maxY - minY/4.0));
+        g.drawString(lr, 3*width/4, 3*height/4);
+        String ur = (int)(minX + 3*(maxX - minX/4.0)) + ","+ (int)(minY + 3*(maxY - minY/4.0));
+        g.drawString(ur, 3*width/4, height/4);
+        String ul = (int)(minX + (maxX - minX/4.0)) + ","+ (int)(minY + 3*(maxY - minY/4.0));
+        g.drawString(ul, width/4, height/4);
+//        System.out.println("generated "+(count++));
         return image;
     }
 
     @Override
     public double getMinValidX() {
-        return -2;
+        return 0;
     }
 
     @Override
     public double getMaxValidX() {
-        return 2;
+        return 100;
     }
 
     @Override
     public double getMinValidY() {
-        return -2;
+        return 0;
     }
 
     @Override
     public double getMaxValidY() {
-        return 2;
+        return 100;
     }
 
 }

@@ -26,7 +26,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  ******************************************************************************/
 
-package uk.ac.rdg.resc.cloudmask;
+package uk.ac.rdg.resc.cloudmask.widgets;
 
 import java.awt.image.BufferedImage;
 import java.io.File;
@@ -44,7 +44,7 @@ import javax.imageio.ImageIO;
 
 import org.controlsfx.control.RangeSlider;
 
-import uk.ac.rdg.resc.edal.domain.Extent;
+import uk.ac.rdg.resc.cloudmask.EdalImageGenerator;
 
 public class ColourbarSlider extends RangeSlider {
     private EdalImageGenerator imageGenerator;
@@ -67,47 +67,58 @@ public class ColourbarSlider extends RangeSlider {
                 updateValue();
             }
         });
+        heightProperty().addListener(new ChangeListener<Number>() {
+            @Override
+            public void changed(ObservableValue<? extends Number> observer, Number oldVal,
+                    Number newVal) {
+                updateValue();
+            }
+        });
+        widthProperty().addListener(new ChangeListener<Number>() {
+            @Override
+            public void changed(ObservableValue<? extends Number> observer, Number oldVal,
+                    Number newVal) {
+                updateValue();
+            }
+        });
+        
         setHighValue(getMax());
         setLowValue(getMin());
-        
-        orientationProperty().addListener(new ChangeListener<Orientation>() {
 
+        orientationProperty().addListener(new ChangeListener<Orientation>() {
             @Override
-            public void changed(ObservableValue<? extends Orientation> observer, Orientation oldVal,
-                    Orientation newVal) {
+            public void changed(ObservableValue<? extends Orientation> observer,
+                    Orientation oldVal, Orientation newVal) {
                 ColourbarSlider.this.orientation = newVal;
             }
         });
+        
+        updateValue();
     }
 
     public void setImageGenerator(EdalImageGenerator imageGenerator) {
         this.imageGenerator = imageGenerator;
-        Extent<Float> scaleRange = imageGenerator.getScaleRange();
-        setMin(scaleRange.getLow());
-        setLowValue(scaleRange.getLow());
-        setMax(scaleRange.getHigh());
-        setHighValue(scaleRange.getHigh());
         updateValue();
     }
 
-    void updateValue() {
-        float range = (float) (getHighValue() - getLowValue());
-        if(range == 0.0) {
-            range = 0.001f;
-        }
-        
-        float belowMin = (float) ((getLowValue() - getMin()) / range);
-        float aboveMax = (float) ((getMax() - getHighValue()) / range);
+    public void updateValue() {
+        if (imageGenerator != null) {
+            float range = (float) (getHighValue() - getLowValue());
+            if (range == 0.0) {
+                range = 0.001f;
+            }
 
-        BufferedImage legend = imageGenerator
-                .getLegend((int) getHeight(), belowMin, aboveMax, orientation == Orientation.VERTICAL);
-        try {
-            ImageIO.write(legend, "png", new File("/home/guy/test.png"));
-        } catch (IOException e) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
+            float belowMin = (float) ((getLowValue() - getMin()) / range);
+            float aboveMax = (float) ((getMax() - getHighValue()) / range);
+            BufferedImage legend = imageGenerator.getLegend((int) getHeight(), belowMin, aboveMax,
+                    orientation == Orientation.VERTICAL);
+            try {
+                ImageIO.write(legend, "png", new File("/home/guy/test.png"));
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+            WritableImage fxImage = SwingFXUtils.toFXImage(legend, null);
+            setBackground(new Background(new BackgroundImage(fxImage, null, null, null, null)));
         }
-        WritableImage fxImage = SwingFXUtils.toFXImage(legend, null);
-        setBackground(new Background(new BackgroundImage(fxImage, null, null, null, null)));
     }
 }

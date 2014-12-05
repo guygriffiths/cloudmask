@@ -29,26 +29,25 @@
 package uk.ac.rdg.resc.cloudmask;
 
 import java.io.IOException;
+import java.util.Optional;
 import java.util.Properties;
-
-import org.controlsfx.control.RangeSlider;
-import org.junit.internal.runners.model.MultipleFailureException;
 
 import javafx.application.Application;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
+import javafx.scene.layout.ColumnConstraints;
 import javafx.scene.layout.GridPane;
+import javafx.scene.layout.Region;
+import javafx.scene.layout.RowConstraints;
+import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
-import uk.ac.rdg.resc.cloudmask.CloudMaskDatasetFactory.MaskedDataset;
+import uk.ac.rdg.resc.cloudmask.widgets.PaletteSelector;
+import uk.ac.rdg.resc.edal.dataset.plugins.DifferencePlugin;
 import uk.ac.rdg.resc.edal.exceptions.EdalException;
-import uk.ac.rdg.resc.edal.graphics.style.util.GraphicsUtils;
-import uk.ac.rdg.resc.edal.graphics.style.util.SimpleFeatureCatalogue;
 
 public class CloudMask extends Application {
-
-    private MaskedDataset dataset;
 
     public static void main(String[] args) {
         launch(args);
@@ -70,7 +69,7 @@ public class CloudMask extends Application {
             nRows = Integer.parseInt(rowsStr);
         } catch (NumberFormatException e) {
         }
-        if(nRows < 2) {
+        if (nRows < 2) {
             /*
              * We need at least 2 rows for the composite and the settings panel.
              * 
@@ -78,75 +77,91 @@ public class CloudMask extends Application {
              */
             nRows = 2;
         }
-        
+
         int nCols = 2;
         try {
             nCols = Integer.parseInt(colsStr);
         } catch (NumberFormatException e) {
         }
-        
+
         int width = 512;
         try {
             width = Integer.parseInt(widthStr);
         } catch (NumberFormatException e) {
         }
-        
+
         int height = 512;
         try {
             height = Integer.parseInt(heightStr);
         } catch (NumberFormatException e) {
         }
-        
+
         GridPane grid = new GridPane();
-        CompositeMaskPane comp = new CompositeMaskPane(null, width, height);
+
+        CloudMaskController controller = new CloudMaskController(width, height);
+
         int col = 0;
-        for(int row = 0;row<nRows;row++) {
-            for(col = 0;col<nCols;col++) {
-                grid.add(new MaskingPane(width, height, comp), col, row);
+        for (int row = 0; row < nRows; row++) {
+            for (col = 0; col < nCols; col++) {
+                MaskedVariableView view = new MaskedVariableView(width, height, controller);
+                grid.add(view, col, row);
             }
         }
-        grid.add(comp, col, 0);
+        grid.add(controller.getCompositeMaskView(), col, 0);
 
-        Button button = new Button("Press me!");
+        Button button = new Button("Load dataset");
         button.setOnAction(new EventHandler<ActionEvent>() {
             @Override
             public void handle(ActionEvent event) {
                 try {
-                    CloudMaskDatasetFactory mdf = new CloudMaskDatasetFactory();
-                    dataset = mdf.createDataset("test", "/home/guy/test_file.nc");
-                    SimpleFeatureCatalogue<MaskedDataset> catalogue = new SimpleFeatureCatalogue<>(
-                            dataset, true);
-                    comp.setCatalogue(catalogue);
+                    controller.loadDataset("/home/guy/test_file.nc");
                 } catch (EdalException | IOException e) {
-                    // TODO Auto-generated catch block
                     e.printStackTrace();
                 }
             }
         });
-        grid.add(button, col, 1);
+        VBox box = new VBox();
+        box.getChildren().add(button);
+        Button button1 = new Button("Add plugin");
+        button1.setOnAction(new EventHandler<ActionEvent>() {
+            @Override
+            public void handle(ActionEvent event) {
+                controller.addPlugin(new DifferencePlugin("lat", "lon"));
+            }
+        });
+        box.getChildren().add(button1);
+        Button button2 = new Button("Palette selection");
+        button2.setOnAction(new EventHandler<ActionEvent>() {
+            @Override
+            public void handle(ActionEvent event) {
+                PaletteSelector ps = new PaletteSelector();
+                Optional<String> result = ps.showAndWait();
+                if(result.isPresent()) {
+                    System.out.println(result.get()+" was selected");
+                }
+            }
+        });
+        box.getChildren().add(button2);
+        grid.add(box, col, 1);
 
-//        VariablePlugin diffPlugin = new NormalisedDiffPlugin("btemp_nadir_1100", "btemp_nadir_1200");
-//
-//        Button button = new Button("Press me!");
-//        button.setOnAction(new EventHandler<ActionEvent>() {
-//            @Override
-//            public void handle(ActionEvent event) {
-//                try {
-//                    dataset.addVariablePlugin(diffPlugin);
-//                } catch (EdalException e) {
-//                    e.printStackTrace();
-//                }
-//            }
-//        });
-//        grid.add(button, 0, 1);
-
-//        grid.add(view1, 0, 0);
-//        grid.add(view2, 0, 1);
-//        grid.add(view3, 1, 1);
-//        grid.add(view4, 1, 0);
-
-        Scene scene = new Scene(grid, 300, 250);
-        scene.getStylesheets().add(getClass().getResource("/colourbar.css").toExternalForm());
+        int WINDOW_WIDTH = 500;
+        int WINDOW_HEIGHT = 500;
+        nCols++;
+        for(int i=0;i<nCols;i++ ) {
+            ColumnConstraints column = new ColumnConstraints();
+            column.setPercentWidth(100.0/nCols);
+            grid.getColumnConstraints().add(column);
+        }
+        for(int i=0;i<nRows;i++ ) {
+            RowConstraints row = new RowConstraints();
+            row.setPercentHeight(100.0/nRows);
+            grid.getRowConstraints().add(row);
+        }
+        grid.setPrefSize(WINDOW_WIDTH, WINDOW_HEIGHT);
+        grid.setMaxSize(Region.USE_COMPUTED_SIZE, Region.USE_COMPUTED_SIZE);
+        
+        Scene scene = new Scene(grid, WINDOW_WIDTH, WINDOW_HEIGHT);
+        scene.getStylesheets().add(getClass().getResource("/cloudmask.css").toExternalForm());
         primaryStage.setScene(scene);
         primaryStage.show();
     }

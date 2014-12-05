@@ -26,7 +26,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  ******************************************************************************/
 
-package uk.ac.rdg.resc.cloudmask;
+package uk.ac.rdg.resc.cloudmask.widgets;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -48,12 +48,30 @@ public class LinkedZoomableImageView extends ZoomableImageView {
             throw new IllegalArgumentException("Linked views must have the same image bounds");
         }
 
+        view.minX = minX;
+        view.maxX = maxX;
+        view.minY = minY;
+        view.maxY = maxY;
+        
+        view.minXBorder = minXBorder;
+        view.maxXBorder = maxXBorder;
+        view.minYBorder = minYBorder;
+        view.maxYBorder = maxYBorder;
+        
         for(LinkedZoomableImageView other : linkedViews) {
             other.linkedViews.add(view);
             view.linkedViews.add(other);
         }
         linkedViews.add(view);
         view.linkedViews.add(this);
+    }
+    
+    public void removeLinkedView(LinkedZoomableImageView view) {
+        for(LinkedZoomableImageView other : linkedViews) {
+            other.linkedViews.remove(view);
+        }
+        linkedViews.remove(view);
+        view.linkedViews.clear();
     }
 
     @Override

@@ -1,3 +1,7 @@
 .colourbar-slider {
     -fx-padding: 0 16 0 16;
 }
+
+.mask-slider {
+	-fx-padding: 0 16 0 16;
+}
