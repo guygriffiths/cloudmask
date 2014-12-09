@@ -36,7 +36,6 @@ import javafx.beans.value.ObservableValue;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import javafx.geometry.Rectangle2D;
-import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 
 import org.controlsfx.control.CheckListView;
@@ -52,8 +51,6 @@ public class CompositeMaskView extends HBox {
     private CheckListView<String> variables;
     private CompositeMaskEdalImageGenerator imageGenerator = null;
 
-//    private String[] mask = null;
-//    private SimpleFeatureCatalogue<MaskedDataset> catalogue;
     private int imageWidth;
     private int imageHeight;
     private CloudMaskController controller;
@@ -63,7 +60,7 @@ public class CompositeMaskView extends HBox {
         this.imageWidth = imageWidth;
         this.imageHeight = imageHeight;
         this.controller = cloudMaskController;
-        
+
         variables = new CheckListView<>();
         variables.setItems(controller.getAvailableVariables());
         variables.setPrefWidth(10000);
@@ -71,12 +68,11 @@ public class CompositeMaskView extends HBox {
         try {
             setCatalogue(null);
         } catch (EdalException | IOException e) {
-            // TODO Auto-generated catch block
             e.printStackTrace();
         }
         getChildren().add(variables);
     }
-    
+
     public void linkView(LinkedZoomableImageView imageView) {
         this.imageView.addLinkedView(imageView);
     }
@@ -87,13 +83,11 @@ public class CompositeMaskView extends HBox {
 
     public void setCatalogue(SimpleFeatureCatalogue<MaskedDataset> catalogue) throws EdalException,
             IOException {
-        if(imageView != null) {
+        if (imageView != null) {
             getChildren().remove(imageView);
         }
-        
-        if (catalogue != null) {
-            MaskedDataset dataset = catalogue.getDataset();
 
+        if (catalogue != null) {
             ObservableList<String> variableNames = catalogue.getDataset()
                     .getUnmaskedVariableNames();
             if (variableNames.size() == 0) {
@@ -108,7 +102,6 @@ public class CompositeMaskView extends HBox {
                         @Override
                         public void changed(ObservableValue<? extends String> observable,
                                 String oldVar, String newVar) {
-                            System.out.println("selection changed");
                             try {
                                 imageGenerator.setVariable(newVar);
                                 imageView.updateImage();
@@ -122,14 +115,13 @@ public class CompositeMaskView extends HBox {
                         @Override
                         public void onChanged(
                                 javafx.collections.ListChangeListener.Change<? extends String> c) {
-                            String[] mask = new String[variables.getCheckModel().getCheckedItems().size()];
+                            String[] mask = new String[variables.getCheckModel().getCheckedItems()
+                                    .size()];
                             for (int i = 0; i < variables.getCheckModel().getCheckedItems().size(); i++) {
                                 mask[i] = variables.getCheckModel().getCheckedItems().get(i) + "-"
-                                        + CloudMaskDatasetFactory.MASK_SUFFIX;
+                                        + MaskedDataset.MASK_SUFFIX;
                             }
-                            catalogue.expireFromCache(CompositeMaskPlugin.COMPOSITEMASK);
-                            dataset.setMaskedVariables(mask);
-                            imageView.updateImage();
+                            controller.setMaskedVariables(mask);
                         }
                     });
             variables.getSelectionModel().select(0);
@@ -165,5 +157,17 @@ public class CompositeMaskView extends HBox {
         }
 
         getChildren().add(0, imageView);
+    }
+
+    public void addToMask(String variable) {
+        variables.getCheckModel().check(variable);
+    }
+
+    public void removeFromMask(String variable) {
+        variables.getCheckModel().clearCheck(variable);
+    }
+
+    public boolean isVariableIncluded(String variable) {
+        return variables.getCheckModel().getCheckedItems().contains(variable);
     }
 }

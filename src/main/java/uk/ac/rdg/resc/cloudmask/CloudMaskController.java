@@ -28,11 +28,14 @@
 
 package uk.ac.rdg.resc.cloudmask;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -40,7 +43,6 @@ import uk.ac.rdg.resc.cloudmask.CloudMaskDatasetFactory.MaskedDataset;
 import uk.ac.rdg.resc.edal.dataset.plugins.VariablePlugin;
 import uk.ac.rdg.resc.edal.domain.Extent;
 import uk.ac.rdg.resc.edal.exceptions.EdalException;
-import uk.ac.rdg.resc.edal.graphics.style.util.GraphicsUtils;
 import uk.ac.rdg.resc.edal.graphics.style.util.SimpleFeatureCatalogue;
 import uk.ac.rdg.resc.edal.util.Extents;
 
@@ -56,12 +58,15 @@ public class CloudMaskController {
 
     private SimpleFeatureCatalogue<MaskedDataset> catalogue;
 
+    private SettingsPane settingsPane;
+
     public CloudMaskController(int compositeWidth, int compositeHeight) {
         dataModels = new HashMap<>();
         views = new HashMap<>();
         viewWindows = new ArrayList<>();
         availableVariables = FXCollections.observableArrayList();
         compositeMaskView = new CompositeMaskView(compositeWidth, compositeHeight, this);
+        settingsPane = new SettingsPane(this);
     }
 
     public ObservableList<String> getAvailableVariables() {
@@ -76,16 +81,21 @@ public class CloudMaskController {
         return compositeMaskView;
     }
 
+    public SettingsPane getSettingsPane() {
+        return settingsPane;
+    }
+
     public MaskedDataset getDataset() {
         return activeDataset;
     }
 
-    public void loadDataset(String datasetLocation) throws IOException, EdalException {
+    public void loadDataset(File datasetLocation) throws IOException, EdalException {
         /*
          * Store dataset
          */
         CloudMaskDatasetFactory mdf = new CloudMaskDatasetFactory();
-        activeDataset = mdf.createDataset("maskedDataset", datasetLocation);
+        activeDataset = mdf.createDataset(datasetLocation.getName(),
+                datasetLocation.getAbsolutePath());
         catalogue = new SimpleFeatureCatalogue<>(activeDataset, true);
         ObservableList<String> unmaskedVariables = activeDataset.getUnmaskedVariableNames();
 
@@ -123,16 +133,45 @@ public class CloudMaskController {
         for (String var : varsToSet) {
             setVariable(viewWindows.get(i++), var);
         }
+
+        settingsPane.setDatasetLoaded(activeDataset);
     }
 
     public void addPlugin(VariablePlugin plugin) {
         try {
             activeDataset.addVariablePlugin(plugin);
             availableVariables.addAll(plugin.providesVariables());
+//            FXCollections.sort(availableVariables);
             for (String var : plugin.providesVariables()) {
                 dataModels.put(var, new EdalImageGenerator(var, catalogue));
             }
         } catch (EdalException | IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void enableMedian(String variable) {
+        try {
+            activeDataset.enableMedian(variable);
+            dataModels.put(variable + MaskedDataset.MEDIAN, new EdalImageGenerator(variable
+                    + MaskedDataset.MEDIAN, catalogue));
+            availableVariables.clear();
+            availableVariables.addAll(activeDataset.getUnmaskedVariableNames());
+//            FXCollections.sort(availableVariables);
+        } catch (IOException | EdalException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void enableStddev(String variable) {
+        try {
+            activeDataset.enableStddev(variable);
+            dataModels.put(variable + MaskedDataset.STDDEV, new EdalImageGenerator(variable
+                    + MaskedDataset.STDDEV, catalogue));
+            availableVariables.clear();
+            availableVariables.addAll(activeDataset.getUnmaskedVariableNames());
+//            FXCollections.sort(availableVariables);
+        } catch (IOException | EdalException e) {
             e.printStackTrace();
         }
     }
@@ -219,5 +258,30 @@ public class CloudMaskController {
         activeDataset.setMaskThresholdInclusive(var, inclusive);
         MaskedVariableView view = views.get(var);
         view.redrawImage();
+    }
+
+    public void setVariableMasked(String variable, boolean masked) {
+        if (masked) {
+            compositeMaskView.addToMask(variable);
+        } else {
+            compositeMaskView.removeFromMask(variable);
+        }
+    }
+    
+    public boolean isVariableInComposite(String variable) {
+        return compositeMaskView.isVariableIncluded(variable);
+    }
+
+    public void setMaskedVariables(String[] mask) {
+        catalogue.expireFromCache(CompositeMaskPlugin.COMPOSITEMASK);
+        activeDataset.setMaskedVariables(mask);
+
+        List<String> maskedVariables = Arrays.asList(mask);
+        for (Entry<String, MaskedVariableView> viewEntry : views.entrySet()) {
+            MaskedVariableView view = viewEntry.getValue();
+            view.setIncludedInMask(maskedVariables.contains(viewEntry.getKey() + "-"
+                    + MaskedDataset.MASK_SUFFIX));
+        }
+        compositeMaskView.imageView.updateImage();
     }
 }

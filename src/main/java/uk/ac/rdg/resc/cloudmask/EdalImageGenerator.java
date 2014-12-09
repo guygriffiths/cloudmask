@@ -93,7 +93,7 @@ public class EdalImageGenerator implements ImageGenerator {
         image = new MapImage();
         image.getLayers().add(rasterLayer);
         
-        RasterLayer threshold = new RasterLayer(var + "-" + CloudMaskDatasetFactory.MASK_SUFFIX,
+        RasterLayer threshold = new RasterLayer(var + "-" + MaskedDataset.MASK_SUFFIX,
                 new SegmentColourScheme(new ColourScale(0f, 1f, false), null, null, null,
                         "#00000000,"+GraphicsUtils.colourToString(maskColor), 2));
         image.getLayers().add(threshold);

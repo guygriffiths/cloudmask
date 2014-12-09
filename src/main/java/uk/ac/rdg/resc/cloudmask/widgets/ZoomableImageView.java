@@ -225,7 +225,7 @@ public class ZoomableImageView extends ImageView {
         setOnZoomFinished(new EventHandler<ZoomEvent>() {
             @Override
             public void handle(ZoomEvent event) {
-                regenerateImageIn(500L);
+                regenerateImageIn(1000L);
             }
         });
 
@@ -263,7 +263,7 @@ public class ZoomableImageView extends ImageView {
                      * Now update the image based on the new limits
                      */
                     updateImageQuick();
-                    regenerateImageIn(500L);
+                    regenerateImageIn(1000L);
                 }
             }
         });

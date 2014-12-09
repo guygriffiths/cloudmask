@@ -41,8 +41,6 @@ import javafx.scene.control.CheckBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
-import javafx.scene.image.Image;
-import javafx.scene.image.ImageView;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
@@ -78,6 +76,7 @@ public class MaskedVariableView extends HBox {
     private RangeSlider maskRangeSlider;
     private ColourbarSlider colourbarSlider;
     private CheckBox exclusiveThreshold;
+    private CheckBox includedInMask;
     private Button selectPalette;
     private Button resetView;
 
@@ -118,6 +117,7 @@ public class MaskedVariableView extends HBox {
         colourbarSlider.setOrientation(Orientation.VERTICAL);
 
         exclusiveThreshold = new CheckBox("Mask outside threshold");
+        includedInMask = new CheckBox("Included in composite");
 
         selectPalette = new Button("Choose colour palette");
 //        selectPalette = new Button("", new ImageView(new Image(getClass().getResourceAsStream(
@@ -175,8 +175,10 @@ public class MaskedVariableView extends HBox {
         settings.getChildren().add(varLabel);
         settings.getChildren().add(variables);
 
-        HBox exclusivePalette = new HBox();
+//        HBox exclusivePalette = new HBox();
+        VBox exclusivePalette = new VBox();
         exclusivePalette.getChildren().add(exclusiveThreshold);
+        exclusivePalette.getChildren().add(includedInMask);
         exclusivePalette.getChildren().add(selectPalette);
         exclusivePalette.getChildren().add(resetView);
 
@@ -262,6 +264,17 @@ public class MaskedVariableView extends HBox {
                 }
             }
         });
+        colourbarSlider.highValueChangingProperty().addListener(new ChangeListener<Boolean>() {
+            @Override
+            public void changed(ObservableValue<? extends Boolean> arg0, Boolean wasChanging, Boolean changing) {
+                /*
+                 * TODO add lots of these to push events to the undo stack.
+                 */
+                if(!changing) {
+                    System.out.println("High value changed");
+                }
+            }
+        });
 
         exclusiveThreshold.selectedProperty().addListener(new ChangeListener<Boolean>() {
             @Override
@@ -269,6 +282,16 @@ public class MaskedVariableView extends HBox {
                     Boolean newVal) {
                 if (!disabledCallbacks) {
                     controller.setMaskThresholdInclusive(currentVariable, !newVal);
+                }
+            }
+        });
+        
+        includedInMask.selectedProperty().addListener(new ChangeListener<Boolean>() {
+            @Override
+            public void changed(ObservableValue<? extends Boolean> observer, Boolean oldVal,
+                    Boolean newVal) {
+                if (!disabledCallbacks) {
+                    controller.setVariableMasked(currentVariable, newVal);
                 }
             }
         });
@@ -351,6 +374,7 @@ public class MaskedVariableView extends HBox {
 
         exclusiveThreshold.setSelected(!controller.getDataset().isMaskThresholdInclusive(
                 currentVariable));
+        includedInMask.setSelected(controller.isVariableInComposite(currentVariable));
 
         disabledCallbacks = false;
 
@@ -390,5 +414,11 @@ public class MaskedVariableView extends HBox {
          */
         imageView.updateImage();
         colourbarSlider.updateValue();
+    }
+
+    public void setIncludedInMask(boolean included) {
+        disabledCallbacks = true;
+        includedInMask.setSelected(included);
+        disabledCallbacks = false;
     }
 }

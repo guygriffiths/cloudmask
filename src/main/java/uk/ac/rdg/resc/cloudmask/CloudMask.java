@@ -28,24 +28,16 @@
 
 package uk.ac.rdg.resc.cloudmask;
 
-import java.io.IOException;
-import java.util.Optional;
+import java.io.File;
 import java.util.Properties;
 
 import javafx.application.Application;
-import javafx.event.ActionEvent;
-import javafx.event.EventHandler;
 import javafx.scene.Scene;
-import javafx.scene.control.Button;
 import javafx.scene.layout.ColumnConstraints;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.RowConstraints;
-import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
-import uk.ac.rdg.resc.cloudmask.widgets.PaletteSelector;
-import uk.ac.rdg.resc.edal.dataset.plugins.DifferencePlugin;
-import uk.ac.rdg.resc.edal.exceptions.EdalException;
 
 public class CloudMask extends Application {
 
@@ -57,12 +49,12 @@ public class CloudMask extends Application {
     public void start(Stage primaryStage) throws Exception {
         primaryStage.setTitle("Cloud Masker");
 
-        Properties settings = new Properties();
-        settings.load(getClass().getResourceAsStream("/cloudmask.properties"));
-        String rowsStr = settings.getProperty("rows", "2");
-        String colsStr = settings.getProperty("columns", "2");
-        String widthStr = settings.getProperty("imageWidth", "512");
-        String heightStr = settings.getProperty("imageHeight", "512");
+        Properties properties = new Properties();
+        properties.load(getClass().getResourceAsStream("/cloudmask.properties"));
+        String rowsStr = properties.getProperty("rows", "2");
+        String colsStr = properties.getProperty("columns", "2");
+        String widthStr = properties.getProperty("imageWidth", "512");
+        String heightStr = properties.getProperty("imageHeight", "512");
 
         int nRows = 2;
         try {
@@ -109,41 +101,8 @@ public class CloudMask extends Application {
         }
         grid.add(controller.getCompositeMaskView(), col, 0);
 
-        Button button = new Button("Load dataset");
-        button.setOnAction(new EventHandler<ActionEvent>() {
-            @Override
-            public void handle(ActionEvent event) {
-                try {
-//                    controller.loadDataset("c:/Users/Guy/test_file.nc");
-                    controller.loadDataset("/home/guy/test_file.nc");
-                } catch (EdalException | IOException e) {
-                    e.printStackTrace();
-                }
-            }
-        });
-        VBox box = new VBox();
-        box.getChildren().add(button);
-        Button button1 = new Button("Add plugin");
-        button1.setOnAction(new EventHandler<ActionEvent>() {
-            @Override
-            public void handle(ActionEvent event) {
-                controller.addPlugin(new DifferencePlugin("lat", "lon"));
-            }
-        });
-        box.getChildren().add(button1);
-        Button button2 = new Button("Palette selection");
-        button2.setOnAction(new EventHandler<ActionEvent>() {
-            @Override
-            public void handle(ActionEvent event) {
-                PaletteSelector ps = new PaletteSelector();
-                Optional<String> result = ps.showAndWait();
-                if(result.isPresent()) {
-                    System.out.println(result.get()+" was selected");
-                }
-            }
-        });
-        box.getChildren().add(button2);
-        grid.add(box, col, 1);
+        SettingsPane settings = controller.getSettingsPane();
+        grid.add(settings, col, 1);
 
         int WINDOW_WIDTH = 500;
         int WINDOW_HEIGHT = 500;
@@ -165,6 +124,8 @@ public class CloudMask extends Application {
         scene.getStylesheets().add(getClass().getResource("/cloudmask.css").toExternalForm());
         primaryStage.setScene(scene);
         primaryStage.show();
+        
+        controller.loadDataset(new File("/home/guy/test_file.nc"));
     }
 
     @Override
