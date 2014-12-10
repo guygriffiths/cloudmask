@@ -52,6 +52,7 @@ public class CloudMaskController {
     private List<MaskedVariableView> viewWindows;
     private ObservableList<String> availableVariables;
     private Map<String, EdalImageGenerator> dataModels;
+    private Map<String, UndoRedoManager<UndoState>> undoStacks;
     private Map<String, MaskedVariableView> views;
 
     private final CompositeMaskView compositeMaskView;
@@ -62,6 +63,7 @@ public class CloudMaskController {
 
     public CloudMaskController(int compositeWidth, int compositeHeight) {
         dataModels = new HashMap<>();
+        undoStacks = new HashMap<>();
         views = new HashMap<>();
         viewWindows = new ArrayList<>();
         availableVariables = FXCollections.observableArrayList();
@@ -105,8 +107,11 @@ public class CloudMaskController {
          * Clear data models & repopulate with new ones
          */
         dataModels.clear();
+        undoStacks.clear();
         for (String var : unmaskedVariables) {
             dataModels.put(var, new EdalImageGenerator(var, catalogue));
+            undoStacks.put(var, new UndoRedoManager<>(new UndoState(dataModels.get(var).scaleRange,
+                    activeDataset.getMaskThreshold(var))));
         }
 
         /*
@@ -144,6 +149,8 @@ public class CloudMaskController {
 //            FXCollections.sort(availableVariables);
             for (String var : plugin.providesVariables()) {
                 dataModels.put(var, new EdalImageGenerator(var, catalogue));
+                undoStacks.put(var, new UndoRedoManager<>(new UndoState(
+                        dataModels.get(var).scaleRange, activeDataset.getMaskThreshold(var))));
             }
         } catch (EdalException | IOException e) {
             e.printStackTrace();
@@ -155,6 +162,11 @@ public class CloudMaskController {
             activeDataset.enableMedian(variable);
             dataModels.put(variable + MaskedDataset.MEDIAN, new EdalImageGenerator(variable
                     + MaskedDataset.MEDIAN, catalogue));
+            undoStacks
+                    .put(variable + MaskedDataset.MEDIAN,
+                            new UndoRedoManager<>(new UndoState(
+                                    dataModels.get(variable).scaleRange, activeDataset
+                                            .getMaskThreshold(variable))));
             availableVariables.clear();
             availableVariables.addAll(activeDataset.getUnmaskedVariableNames());
 //            FXCollections.sort(availableVariables);
@@ -168,6 +180,11 @@ public class CloudMaskController {
             activeDataset.enableStddev(variable);
             dataModels.put(variable + MaskedDataset.STDDEV, new EdalImageGenerator(variable
                     + MaskedDataset.STDDEV, catalogue));
+            undoStacks
+                    .put(variable + MaskedDataset.STDDEV,
+                            new UndoRedoManager<>(new UndoState(
+                                    dataModels.get(variable).scaleRange, activeDataset
+                                            .getMaskThreshold(variable))));
             availableVariables.clear();
             availableVariables.addAll(activeDataset.getUnmaskedVariableNames());
 //            FXCollections.sort(availableVariables);
@@ -239,7 +256,6 @@ public class CloudMaskController {
          */
         EdalImageGenerator modelState = dataModels.get(var);
         modelState.setPalette(palette);
-        ;
 
         MaskedVariableView view = views.get(var);
         view.redrawImage();
@@ -267,7 +283,7 @@ public class CloudMaskController {
             compositeMaskView.removeFromMask(variable);
         }
     }
-    
+
     public boolean isVariableInComposite(String variable) {
         return compositeMaskView.isVariableIncluded(variable);
     }
@@ -283,5 +299,35 @@ public class CloudMaskController {
                     + MaskedDataset.MASK_SUFFIX));
         }
         compositeMaskView.imageView.updateImage();
+    }
+
+    public void addUndoState(String var) {
+        UndoState undoState = new UndoState(dataModels.get(var).scaleRange,
+                activeDataset.getMaskThreshold(var));
+        undoStacks.get(var).setCurrentState(undoState);
+    }
+
+    public void undoLastAction(String var) {
+        UndoState undo = undoStacks.get(var).undo();
+        if (undo != null) {
+            views.get(var).changeSliderValues(undo.colourScaleRange, undo.maskScaleRange, false);
+        }
+    }
+
+    public void redoLastAction(String var) {
+        UndoState redo = undoStacks.get(var).redo();
+        if (redo != null) {
+            views.get(var).changeSliderValues(redo.colourScaleRange, redo.maskScaleRange, false);
+        }
+    }
+
+    private class UndoState {
+        private Extent<Float> colourScaleRange;
+        private Extent<Double> maskScaleRange;
+
+        public UndoState(Extent<Float> colourScaleRange, Extent<Double> maskScaleRange) {
+            this.colourScaleRange = colourScaleRange;
+            this.maskScaleRange = maskScaleRange;
+        }
     }
 }

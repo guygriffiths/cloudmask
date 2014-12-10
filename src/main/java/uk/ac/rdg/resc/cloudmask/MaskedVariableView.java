@@ -80,6 +80,9 @@ public class MaskedVariableView extends HBox {
     private Button selectPalette;
     private Button resetView;
 
+    private Button undoButton;
+    private Button redoButton;
+
     /*
      * Used to prevent new variable selection events from being triggered when
      * the variable list changes
@@ -124,6 +127,9 @@ public class MaskedVariableView extends HBox {
 //                "/colours.png"))));
 
         resetView = new Button("Reset");
+
+        undoButton = new Button("Undo");
+        redoButton = new Button("Redo");
 
         addCallbacks();
 
@@ -175,12 +181,15 @@ public class MaskedVariableView extends HBox {
         settings.getChildren().add(varLabel);
         settings.getChildren().add(variables);
 
-//        HBox exclusivePalette = new HBox();
         VBox exclusivePalette = new VBox();
         exclusivePalette.getChildren().add(exclusiveThreshold);
         exclusivePalette.getChildren().add(includedInMask);
         exclusivePalette.getChildren().add(selectPalette);
-        exclusivePalette.getChildren().add(resetView);
+        HBox historyButtons = new HBox();
+        historyButtons.getChildren().add(undoButton);
+        historyButtons.getChildren().add(redoButton);
+        historyButtons.getChildren().add(resetView);
+        exclusivePalette.getChildren().add(historyButtons);
 
         settings.getChildren().add(exclusivePalette);
         VBox.setVgrow(settings, Priority.NEVER);
@@ -243,6 +252,30 @@ public class MaskedVariableView extends HBox {
                 }
             }
         });
+        maskRangeSlider.lowValueChangingProperty().addListener(new ChangeListener<Boolean>() {
+            @Override
+            public void changed(ObservableValue<? extends Boolean> arg0, Boolean wasChanging,
+                    Boolean changing) {
+                if (!changing) {
+                    /*
+                     * Finished changing. Add new state to the undo stack
+                     */
+                    controller.addUndoState(currentVariable);
+                }
+            }
+        });
+        maskRangeSlider.highValueChangingProperty().addListener(new ChangeListener<Boolean>() {
+            @Override
+            public void changed(ObservableValue<? extends Boolean> arg0, Boolean wasChanging,
+                    Boolean changing) {
+                if (!changing) {
+                    /*
+                     * Finished changing. Add new state to the undo stack
+                     */
+                    controller.addUndoState(currentVariable);
+                }
+            }
+        });
 
         colourbarSlider.lowValueProperty().addListener(new ChangeListener<Number>() {
             @Override
@@ -264,14 +297,27 @@ public class MaskedVariableView extends HBox {
                 }
             }
         });
+        colourbarSlider.lowValueChangingProperty().addListener(new ChangeListener<Boolean>() {
+            @Override
+            public void changed(ObservableValue<? extends Boolean> arg0, Boolean wasChanging,
+                    Boolean changing) {
+                if (!changing) {
+                    /*
+                     * Finished changing. Add new state to the undo stack
+                     */
+                    controller.addUndoState(currentVariable);
+                }
+            }
+        });
         colourbarSlider.highValueChangingProperty().addListener(new ChangeListener<Boolean>() {
             @Override
-            public void changed(ObservableValue<? extends Boolean> arg0, Boolean wasChanging, Boolean changing) {
-                /*
-                 * TODO add lots of these to push events to the undo stack.
-                 */
-                if(!changing) {
-                    System.out.println("High value changed");
+            public void changed(ObservableValue<? extends Boolean> arg0, Boolean wasChanging,
+                    Boolean changing) {
+                if (!changing) {
+                    /*
+                     * Finished changing. Add new state to the undo stack
+                     */
+                    controller.addUndoState(currentVariable);
                 }
             }
         });
@@ -285,7 +331,7 @@ public class MaskedVariableView extends HBox {
                 }
             }
         });
-        
+
         includedInMask.selectedProperty().addListener(new ChangeListener<Boolean>() {
             @Override
             public void changed(ObservableValue<? extends Boolean> observer, Boolean oldVal,
@@ -317,6 +363,21 @@ public class MaskedVariableView extends HBox {
                 maskRangeSlider.setLowValue(maxScaleRange.getLow());
                 maskRangeSlider.setHighValue(maxScaleRange.getHigh());
                 exclusiveThreshold.setSelected(false);
+                controller.addUndoState(currentVariable);
+            }
+        });
+
+        undoButton.setOnAction(new EventHandler<ActionEvent>() {
+            @Override
+            public void handle(ActionEvent event) {
+                controller.undoLastAction(currentVariable);
+            }
+        });
+
+        redoButton.setOnAction(new EventHandler<ActionEvent>() {
+            @Override
+            public void handle(ActionEvent event) {
+                controller.redoLastAction(currentVariable);
             }
         });
     }
@@ -406,6 +467,16 @@ public class MaskedVariableView extends HBox {
          */
         maskRangeSlider.setMin(scaleRange.getLow());
         maskRangeSlider.setMax(scaleRange.getHigh());
+    }
+
+    public void changeSliderValues(Extent<Float> colourScaleValues,
+            Extent<Double> maskSliderValues, boolean disableCallbacks) {
+        disabledCallbacks = disableCallbacks;
+        colourbarSlider.setLowValue(colourScaleValues.getLow());
+        colourbarSlider.setHighValue(colourScaleValues.getHigh());
+        maskRangeSlider.setLowValue(maskSliderValues.getLow());
+        maskRangeSlider.setHighValue(maskSliderValues.getHigh());
+        disabledCallbacks = false;
     }
 
     public void redrawImage() {
