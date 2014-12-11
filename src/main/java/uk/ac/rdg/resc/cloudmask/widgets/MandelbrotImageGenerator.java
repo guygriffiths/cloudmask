@@ -34,39 +34,39 @@ import uk.ac.rdg.resc.cloudmask.widgets.ZoomableImageView.ImageGenerator;
 import uk.ac.rdg.resc.edal.graphics.style.util.ColourPalette;
 
 public class MandelbrotImageGenerator implements ImageGenerator {
-    
+
     private ColourPalette palette;
 
     public MandelbrotImageGenerator() {
         this("default");
     }
-    
+
     public MandelbrotImageGenerator(String paletteName) {
         palette = ColourPalette.fromString(paletteName, 250);
     }
-    
+
     @Override
     public BufferedImage generateImage(double minX, double minY, double maxX, double maxY,
             int width, int height) {
         BufferedImage image = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
-        
-        for(int i=0;i<width; i++) {
-            double x = minX + i*(maxX-minX)/width;
-            for(int j=0;j<height; j++) {
-                double y = minY + (height - 1 - j)*(maxY-minY)/height;
+
+        for (int i = 0; i < width; i++) {
+            double x = minX + i * (maxX - minX) / width;
+            for (int j = 0; j < height; j++) {
+                double y = minY + (height - 1 - j) * (maxY - minY) / height;
                 int iterations = 0;
                 double xp = x;
                 double yp = y;
-                while( xp * xp + yp * yp < 4 && iterations < 250) {
-                    double xtemp = xp*xp - yp*yp + x;
-                    yp = 2 * xp*yp + y;
+                while (xp * xp + yp * yp < 4 && iterations < 250) {
+                    double xtemp = xp * xp - yp * yp + x;
+                    yp = 2 * xp * yp + y;
                     xp = xtemp;
                     iterations++;
                 }
                 image.setRGB(i, j, palette.getColor((float) (iterations / 250.0)).getRGB());
             }
         }
-        
+
         return image;
     }
 
