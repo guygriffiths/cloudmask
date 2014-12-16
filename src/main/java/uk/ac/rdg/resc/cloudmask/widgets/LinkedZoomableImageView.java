@@ -114,11 +114,11 @@ public class LinkedZoomableImageView extends ZoomableImageView {
     public void updateImage() {
         super.updateImage();
         for (LinkedZoomableImageView view : linkedViews) {
-            view.updateLinkedImage();
+            view.updateJustThisImage();
         }
     }
 
-    private void updateLinkedImage() {
+    public void updateJustThisImage() {
         super.updateImage();
     }
 }

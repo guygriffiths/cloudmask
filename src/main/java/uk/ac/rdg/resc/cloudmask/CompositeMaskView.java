@@ -30,30 +30,53 @@ package uk.ac.rdg.resc.cloudmask;
 
 import java.awt.image.BufferedImage;
 import java.io.IOException;
+import java.util.Optional;
 
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
+import javafx.event.ActionEvent;
+import javafx.event.EventHandler;
 import javafx.geometry.Rectangle2D;
+import javafx.scene.control.Button;
+import javafx.scene.control.CheckBox;
+import javafx.scene.control.Label;
+import javafx.scene.control.RadioButton;
+import javafx.scene.control.TitledPane;
+import javafx.scene.control.ToggleGroup;
+import javafx.scene.input.MouseButton;
+import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.VBox;
+import javafx.scene.text.Font;
 
 import org.controlsfx.control.CheckListView;
 
 import uk.ac.rdg.resc.cloudmask.CloudMaskDatasetFactory.MaskedDataset;
 import uk.ac.rdg.resc.cloudmask.widgets.LinkedZoomableImageView;
+import uk.ac.rdg.resc.cloudmask.widgets.PaletteSelector;
 import uk.ac.rdg.resc.cloudmask.widgets.ZoomableImageView.ImageGenerator;
 import uk.ac.rdg.resc.edal.exceptions.EdalException;
 import uk.ac.rdg.resc.edal.graphics.style.util.SimpleFeatureCatalogue;
+import uk.ac.rdg.resc.edal.grid.HorizontalGrid;
+import uk.ac.rdg.resc.edal.position.HorizontalPosition;
+import uk.ac.rdg.resc.edal.util.GridCoordinates2D;
 
 public class CompositeMaskView extends HBox {
     LinkedZoomableImageView imageView = null;
     private CheckListView<String> variables;
+    private Button selectPalette;
+    
+    private TitledPane pixelType;
     private CompositeMaskEdalImageGenerator imageGenerator = null;
 
     private int imageWidth;
     private int imageHeight;
     private CloudMaskController controller;
+    
+    private Integer manualMaskValue = MaskedDataset.MANUAL_CLOUDY;
+    private Label varLabel;
 
     public CompositeMaskView(int imageWidth, int imageHeight,
             CloudMaskController cloudMaskController) {
@@ -61,16 +84,103 @@ public class CompositeMaskView extends HBox {
         this.imageHeight = imageHeight;
         this.controller = cloudMaskController;
 
+        varLabel = new Label("No variable selected");
+        varLabel.setFont(new Font(24));
+        
         variables = new CheckListView<>();
-        variables.setItems(controller.getAvailableVariables());
+        variables.setItems(controller.getPlottableVariables());
         variables.setPrefWidth(10000);
+        
+        pixelType = new TitledPane();
+        pixelType.setText("Manual masking");
+        pixelType.setCollapsible(false);
+        VBox types = new VBox();
+        ToggleGroup group = new ToggleGroup();
+        RadioButton unset = new RadioButton("Unset");
+        unset.setToggleGroup(group);
+        unset.setOnAction(new EventHandler<ActionEvent>() {
+            @Override
+            public void handle(ActionEvent event) {
+                manualMaskValue = null;
+            }
+        });
+        types.getChildren().add(unset);
+        RadioButton clear = new RadioButton("Clear");
+        clear.setToggleGroup(group);
+        clear.setOnAction(new EventHandler<ActionEvent>() {
+            @Override
+            public void handle(ActionEvent event) {
+                manualMaskValue = MaskedDataset.MANUAL_CLEAR;
+            }
+        });
+        types.getChildren().add(clear);
+        RadioButton probClear = new RadioButton("Probably clear");
+        probClear.setToggleGroup(group);
+        probClear.setOnAction(new EventHandler<ActionEvent>() {
+            @Override
+            public void handle(ActionEvent event) {
+                manualMaskValue = MaskedDataset.MANUAL_PROBABLY_CLEAR;
+            }
+        });
+        types.getChildren().add(probClear);
+        RadioButton probCloudy = new RadioButton("Probably cloudy");
+        probCloudy.setToggleGroup(group);
+        probCloudy.setOnAction(new EventHandler<ActionEvent>() {
+            @Override
+            public void handle(ActionEvent event) {
+                manualMaskValue = MaskedDataset.MANUAL_PROBABLY_CLOUDY;
+            }
+        });
+        types.getChildren().add(probCloudy);
+        RadioButton cloudy = new RadioButton("Cloudy");
+        cloudy.setToggleGroup(group);
+        cloudy.setOnAction(new EventHandler<ActionEvent>() {
+            @Override
+            public void handle(ActionEvent event) {
+                manualMaskValue = MaskedDataset.MANUAL_CLOUDY;
+            }
+        });
+        cloudy.setSelected(true);
+        types.getChildren().add(cloudy);
+        
+        CheckBox showSetPixels = new CheckBox("Highlight manually set pixels");
+        showSetPixels.selectedProperty().addListener(new ChangeListener<Boolean>() {
+            @Override
+            public void changed(ObservableValue<? extends Boolean> observable, Boolean oldVal, Boolean newVal) {
+                imageGenerator.showMaskedPixels(newVal);
+                imageView.updateJustThisImage();
+            }
+        });
+        types.getChildren().add(showSetPixels);
+        
+        
+        pixelType.setContent(types);
 
+        selectPalette = new Button("Choose colour palette");
+        selectPalette.setOnAction(new EventHandler<ActionEvent>() {
+            @Override
+            public void handle(ActionEvent event) {
+                PaletteSelector ps = new PaletteSelector();
+                Optional<String> result = ps.showAndWait();
+                if (result.isPresent()) {
+                    imageGenerator.setPalette(result.get());
+                    imageView.updateJustThisImage();
+                }
+            }
+        });
+        
+        VBox widgets = new VBox();
+        widgets.getChildren().add(varLabel);
+        widgets.getChildren().add(variables);
+        widgets.getChildren().add(pixelType);
+        widgets.getChildren().add(selectPalette);
+        
         try {
             setCatalogue(null);
         } catch (EdalException | IOException e) {
             e.printStackTrace();
         }
-        getChildren().add(variables);
+        getChildren().add(widgets);
     }
 
     public void linkView(LinkedZoomableImageView imageView) {
@@ -94,8 +204,34 @@ public class CompositeMaskView extends HBox {
                 throw new EdalException("No variables are present.");
             }
 
+            HorizontalGrid maskGrid = (HorizontalGrid) catalogue.getDataset()
+                    .getVariableMetadata(MaskedDataset.MANUAL_MASK_NAME).getHorizontalDomain();
+
             imageGenerator = new CompositeMaskEdalImageGenerator(variableNames.get(0), catalogue);
+            varLabel.textProperty().set(variableNames.get(0));
             imageView = new LinkedZoomableImageView(imageWidth, imageHeight, imageGenerator);
+            imageView.addEventHandler(MouseEvent.MOUSE_CLICKED, new EventHandler<MouseEvent>() {
+                @Override
+                public void handle(MouseEvent event) {
+                    if (event.getButton() == MouseButton.SECONDARY) {
+                        HorizontalPosition coords = imageView.getCoordinateFromImagePosition(
+                                event.getX(), event.getY());
+                        GridCoordinates2D imageCoords = maskGrid.findIndexOf(coords);
+                        controller.setPixelOn(imageCoords, manualMaskValue);
+                    }
+                }
+            });
+            imageView.addEventHandler(MouseEvent.MOUSE_DRAGGED, new EventHandler<MouseEvent>() {
+                @Override
+                public void handle(MouseEvent event) {
+                    if (event.isSecondaryButtonDown()) {
+                        HorizontalPosition coords = imageView.getCoordinateFromImagePosition(
+                                event.getX(), event.getY());
+                        GridCoordinates2D imageCoords = maskGrid.findIndexOf(coords);
+                        controller.setPixelOn(imageCoords, manualMaskValue);
+                    }
+                }
+            });
 
             variables.getSelectionModel().selectedItemProperty()
                     .addListener(new ChangeListener<String>() {
@@ -104,6 +240,7 @@ public class CompositeMaskView extends HBox {
                                 String oldVar, String newVar) {
                             try {
                                 imageGenerator.setVariable(newVar);
+                                varLabel.textProperty().set(newVar);
                                 imageView.updateImage();
                             } catch (EdalException e) {
                                 e.printStackTrace();

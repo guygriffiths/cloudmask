@@ -47,6 +47,7 @@ import uk.ac.rdg.resc.cloudmask.CloudMaskDatasetFactory.MaskedDataset;
 import uk.ac.rdg.resc.edal.dataset.plugins.DifferencePlugin;
 import uk.ac.rdg.resc.edal.dataset.plugins.NormalisedDifferencePlugin;
 import uk.ac.rdg.resc.edal.exceptions.EdalException;
+import uk.ac.rdg.resc.edal.graphics.style.util.GraphicsUtils;
 
 public class SettingsPane extends TitledPane {
     private VBox content;
@@ -59,10 +60,14 @@ public class SettingsPane extends TitledPane {
     private ChoiceBox<String> normDiffVar2;
     private ChoiceBox<String> medianVar;
     private ChoiceBox<String> stddevVar;
+    private ChoiceBox<String> rgbVar1;
+    private ChoiceBox<String> rgbVar2;
+    private ChoiceBox<String> rgbVar3;
     private Button diffButton;
     private Button normDiffButton;
     private Button medianButton;
     private Button stddevButton;
+    private Button rgbButton;
 
     public SettingsPane(CloudMaskController controller) {
         setText("Settings");
@@ -84,7 +89,7 @@ public class SettingsPane extends TitledPane {
                         new ExtensionFilter("NetCDF Files", "*.nc"),
                         new ExtensionFilter("NcML Files", "*.ncml"));
                 File selectedFile = fileChooser.showOpenDialog(null);
-                if(selectedFile != null) {
+                if (selectedFile != null) {
                     try {
                         controller.loadDataset(selectedFile);
                     } catch (IOException | EdalException e) {
@@ -109,16 +114,20 @@ public class SettingsPane extends TitledPane {
         operations.setVgap(10);
 
         Label diffLabel = new Label("Difference");
+        diffLabel.setMinWidth(150);
         diffVar1 = new ChoiceBox<>();
+        diffVar1.setMinWidth(150);
         diffVar2 = new ChoiceBox<>();
+        diffVar2.setMinWidth(150);
         diffButton = new Button("Generate");
+        diffButton.setMinWidth(100);
         diffButton.setDisable(true);
         diffButton.setOnAction(new EventHandler<ActionEvent>() {
             @Override
             public void handle(ActionEvent event) {
                 String var1 = diffVar1.getValue();
                 String var2 = diffVar2.getValue();
-                if(var1 != null && var2 != null) {
+                if (var1 != null && var2 != null) {
                     controller.addPlugin(new DifferencePlugin(var1, var2));
                 }
             }
@@ -127,19 +136,22 @@ public class SettingsPane extends TitledPane {
         operations.add(diffLabel, 0, 0);
         operations.add(diffVar1, 1, 0);
         operations.add(diffVar2, 2, 0);
-        operations.add(diffButton, 3, 0);
+        operations.add(diffButton, 4, 0);
 
         Label normDiffLabel = new Label("Normalised Difference");
         normDiffVar1 = new ChoiceBox<>();
+        normDiffVar1.setMinWidth(150);
         normDiffVar2 = new ChoiceBox<>();
+        normDiffVar2.setMinWidth(150);
         normDiffButton = new Button("Generate");
+        normDiffButton.setMinWidth(100);
         normDiffButton.setDisable(true);
         normDiffButton.setOnAction(new EventHandler<ActionEvent>() {
             @Override
             public void handle(ActionEvent event) {
                 String var1 = normDiffVar1.getValue();
                 String var2 = normDiffVar2.getValue();
-                if(var1 != null && var2 != null) {
+                if (var1 != null && var2 != null) {
                     controller.addPlugin(new NormalisedDifferencePlugin(var1, var2));
                 }
             }
@@ -148,17 +160,19 @@ public class SettingsPane extends TitledPane {
         operations.add(normDiffLabel, 0, 1);
         operations.add(normDiffVar1, 1, 1);
         operations.add(normDiffVar2, 2, 1);
-        operations.add(normDiffButton, 3, 1);
+        operations.add(normDiffButton, 4, 1);
 
         Label medianLabel = new Label("Median filter");
         medianVar = new ChoiceBox<>();
+        medianVar.setMinWidth(150);
         medianButton = new Button("Generate");
+        medianButton.setMinWidth(100);
         medianButton.setDisable(true);
         medianButton.setOnAction(new EventHandler<ActionEvent>() {
             @Override
             public void handle(ActionEvent event) {
                 String var = medianVar.getValue();
-                if(var != null) {
+                if (var != null) {
                     controller.enableMedian(var);
                 }
             }
@@ -166,17 +180,19 @@ public class SettingsPane extends TitledPane {
 
         operations.add(medianLabel, 0, 2);
         operations.add(medianVar, 1, 2);
-        operations.add(medianButton, 3, 2);
+        operations.add(medianButton, 4, 2);
 
         Label stddevLabel = new Label("Std. dev. filter");
         stddevVar = new ChoiceBox<>();
+        stddevVar.setMinWidth(150);
         stddevButton = new Button("Generate");
+        stddevButton.setMinWidth(100);
         stddevButton.setDisable(true);
         stddevButton.setOnAction(new EventHandler<ActionEvent>() {
             @Override
             public void handle(ActionEvent event) {
                 String var = stddevVar.getValue();
-                if(var != null) {
+                if (var != null) {
                     controller.enableStddev(var);
                 }
             }
@@ -184,13 +200,58 @@ public class SettingsPane extends TitledPane {
 
         operations.add(stddevLabel, 0, 3);
         operations.add(stddevVar, 1, 3);
-        operations.add(stddevButton, 3, 3);
+        operations.add(stddevButton, 4, 3);
+
+        Label rgbLabel = new Label("RGB Image");
+        rgbVar1 = new ChoiceBox<>();
+        rgbVar1.setMinWidth(150);
+        rgbVar2 = new ChoiceBox<>();
+        rgbVar2.setMinWidth(150);
+        rgbVar3 = new ChoiceBox<>();
+        rgbVar3.setMinWidth(150);
+        rgbButton = new Button("Generate");
+        rgbButton.setMinWidth(100);
+        rgbButton.setDisable(true);
+        rgbButton.setOnAction(new EventHandler<ActionEvent>() {
+            @Override
+            public void handle(ActionEvent event) {
+                String var1 = rgbVar1.getValue();
+                String var2 = rgbVar2.getValue();
+                String var3 = rgbVar3.getValue();
+                if (var1 != null && var2 != null && var3 != null) {
+                    controller.addPlugin(new RgbFalseColourPlugin(var1, var2, var3, GraphicsUtils
+                            .estimateValueRange(controller.getDataset(), var1), GraphicsUtils
+                            .estimateValueRange(controller.getDataset(), var2), GraphicsUtils
+                            .estimateValueRange(controller.getDataset(), var3)));
+                }
+            }
+        });
+
+        operations.add(rgbLabel, 0, 4);
+        operations.add(rgbVar1, 1, 4);
+        operations.add(rgbVar2, 2, 4);
+        operations.add(rgbVar3, 3, 4);
+        operations.add(rgbButton, 4, 4);
 
         operationsBox.setContent(operations);
 
         content.getChildren().add(operationsBox);
 
         Button saveButton = new Button("Save");
+        saveButton.setOnAction(new EventHandler<ActionEvent>() {
+            @Override
+            public void handle(ActionEvent event) {
+                FileChooser fileChooser = new FileChooser();
+                fileChooser.setTitle("Choose file to save");
+                fileChooser.getExtensionFilters().addAll(
+                        new ExtensionFilter("NetCDF Files", "*.nc"),
+                        new ExtensionFilter("NcML Files", "*.ncml"));
+                File selectedFile = fileChooser.showOpenDialog(null);
+                if (selectedFile != null) {
+                    controller.saveCurrentDataset(selectedFile);
+                }
+            }
+        });
         content.getChildren().add(saveButton);
 
         setContent(content);
@@ -216,9 +277,17 @@ public class SettingsPane extends TitledPane {
         stddevVar.setItems(dataset.getOriginalVariableNames());
         stddevVar.getSelectionModel().select(0);
         
+        rgbVar1.setItems(variables);
+        rgbVar1.getSelectionModel().select(0);
+        rgbVar2.setItems(variables);
+        rgbVar2.getSelectionModel().select(1);
+        rgbVar3.setItems(variables);
+        rgbVar3.getSelectionModel().select(2);
+
         diffButton.setDisable(false);
         normDiffButton.setDisable(false);
         medianButton.setDisable(false);
         stddevButton.setDisable(false);
+        rgbButton.setDisable(false);
     }
 }

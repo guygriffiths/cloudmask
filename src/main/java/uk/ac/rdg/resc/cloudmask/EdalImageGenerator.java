@@ -124,6 +124,10 @@ public class EdalImageGenerator implements ImageGenerator {
         }
         rasterLayer.setColourScheme(colourScheme);
     }
+    
+    public boolean isRgb() {
+        return rgb;
+    }
 
     public Extent<Float> getScaleRange() {
         return scaleRange;

@@ -48,7 +48,8 @@ public class CloudMask extends Application {
     @Override
     public void start(Stage primaryStage) throws Exception {
         primaryStage.setTitle("Cloud Masker");
-
+        primaryStage.setFullScreen(true);
+        
         Properties properties = new Properties();
         properties.load(getClass().getResourceAsStream("/cloudmask.properties"));
         String rowsStr = properties.getProperty("rows", "2");

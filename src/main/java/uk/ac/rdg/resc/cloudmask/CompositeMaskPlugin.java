@@ -36,53 +36,77 @@ import uk.ac.rdg.resc.edal.position.HorizontalPosition;
 
 public class CompositeMaskPlugin extends VariablePlugin {
 
-    public static final String COMPOSITEMASK = "composite-mask"; 
-    private boolean noMaskSet = true;
+    public static final String COMPOSITEMASK = "composite-mask";
     private VariableMetadata compositeMeta;
-    
-    public CompositeMaskPlugin(String... composites) {
-        super(composites, new String[] { "mask" });
+    private String manualMaskName;
+
+    public CompositeMaskPlugin(String manualMask) {
+        super(new String[] { manualMask }, new String[] { "mask" });
+        manualMaskName = manualMask;
     }
 
     @Override
     protected VariableMetadata[] doProcessVariableMetadata(VariableMetadata... metadata)
             throws EdalException {
-        compositeMeta = newVariableMetadataFromMetadata(new Parameter(
-                getFullId("mask"), "Composite mask", "Composite mask", "0: unmasked, 1: masked",
-                null), true, metadata);
+        compositeMeta = newVariableMetadataFromMetadata(new Parameter(getFullId("mask"),
+                "Composite mask", "Composite mask", "0: unmasked, 1: masked", null), true, metadata);
         return new VariableMetadata[] { compositeMeta };
     }
 
     @Override
     protected Number generateValue(String varSuffix, HorizontalPosition pos, Number... sourceValues) {
-        if(noMaskSet) {
-            return 0;
+        /*
+         * sourceValues[0] is the manual mask, and generates values:
+         * 
+         * null - unset
+         * 
+         * 0 - Clear
+         * 
+         * 1 - Probably clear
+         * 
+         * 2 - Probably cloud
+         * 
+         * 3 - Cloud
+         */
+        if (sourceValues[0] != null) {
+//            switch (sourceValues[0].intValue()) {
+//            case 0:
+//                return 0f;
+//            case 1:
+//                return 0.5f;
+//            case 2:
+//                return 0.75f;
+//            case 3:
+//                return 1.0f;
+//            default:
+//                return 0.25f;
+//            }
+            return sourceValues[0].floatValue() / 3.0f;
         }
-        for (Number n : sourceValues) {
-            if (n.floatValue() > 0) {
+        for (int i = 1; i < sourceValues.length; i++) {
+            if (sourceValues[i].floatValue() > 0) {
                 return 1;
             }
         }
-        return 0;
+        return 0f;
     }
 
     @Override
     protected String combineIds(String... partsToUse) {
         return "composite";
     }
-    
+
     public void setMasks(String... masks) {
-        if(masks.length > 0) {
-            this.uses = masks;
-            noMaskSet = false;
-        } else {
-            noMaskSet = true;
+        this.uses = new String[masks.length + 1];
+        this.uses[0] = manualMaskName;
+        for (int i = 1; i <= masks.length; i++) {
+            this.uses[i] = masks[i - 1];
         }
         StringBuilder mComps = new StringBuilder();
-        for(String comp : this.uses) {
-            mComps.append(comp+",");
+        for (String comp : this.uses) {
+            mComps.append(comp + ",");
         }
-        mComps.deleteCharAt(mComps.length()-1);
+        mComps.deleteCharAt(mComps.length() - 1);
         compositeMeta.getVariableProperties().put("mask_components", mComps.toString());
     }
 }

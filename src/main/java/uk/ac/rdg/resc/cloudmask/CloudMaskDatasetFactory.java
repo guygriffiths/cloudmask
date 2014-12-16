@@ -86,8 +86,11 @@ import uk.ac.rdg.resc.edal.metadata.GridVariableMetadata;
 import uk.ac.rdg.resc.edal.metadata.Parameter;
 import uk.ac.rdg.resc.edal.metadata.VariableMetadata;
 import uk.ac.rdg.resc.edal.position.HorizontalPosition;
+import uk.ac.rdg.resc.edal.util.Array2D;
 import uk.ac.rdg.resc.edal.util.Array4D;
 import uk.ac.rdg.resc.edal.util.Extents;
+import uk.ac.rdg.resc.edal.util.GridCoordinates2D;
+import uk.ac.rdg.resc.edal.util.ValuesArray2D;
 import uk.ac.rdg.resc.edal.util.cdm.CdmUtils;
 
 /**
@@ -145,8 +148,8 @@ public final class CloudMaskDatasetFactory extends DatasetFactory {
 
                 RegularAxis xAxis = new RegularAxisImpl("x-axis", 0, 1.0, xDimension.getLength(),
                         false);
-                RegularAxis yAxis = new RegularAxisImpl("y-axis", yDimension.getLength() - 1, -1.0,
-                        yDimension.getLength(), false);
+                RegularAxis yAxis = new RegularAxisImpl("y-axis", 0, 1.0, yDimension.getLength(),
+                        false);
                 HorizontalGrid hDomain = new RegularGridImpl(xAxis, yAxis, null);
 
                 String varId = var.getFullName();
@@ -190,6 +193,12 @@ public final class CloudMaskDatasetFactory extends DatasetFactory {
      * @author Guy Griffiths
      */
     public final class MaskedDataset extends AbstractGridDataset {
+        public final static String MANUAL_MASK_NAME = "manual-cloudmask";
+        public final static int MANUAL_CLEAR = 0;
+        public final static int MANUAL_PROBABLY_CLEAR = 1;
+        public final static int MANUAL_PROBABLY_CLOUDY = 2;
+        public final static int MANUAL_CLOUDY = 3;
+
         public final static String MASK_SUFFIX = "MASK";
         public final static String MEDIAN = "-median3x3";
         public final static String STDDEV = "-stddev3x3";
@@ -202,9 +211,11 @@ public final class CloudMaskDatasetFactory extends DatasetFactory {
 
         private CompositeMaskPlugin compositePlugin;
 
+        private Array2D<Number> manualMask;
+
         public MaskedDataset(String id, String location, Collection<GridVariableMetadata> vars,
                 DataReadingStrategy dataReadingStrategy) throws EdalException {
-            super(id, vars);
+            super(id, filterVars(vars));
             this.location = location;
             this.dataReadingStrategy = dataReadingStrategy;
 
@@ -221,11 +232,30 @@ public final class CloudMaskDatasetFactory extends DatasetFactory {
             }
 
             /*
+             * All variables for the masked dataset must share the same domain.
+             * We can use any of their domains to create the GVM for the manual
+             * mask
+             */
+            GridVariableMetadata metadata = vars.iterator().next();
+            manualMask = new ValuesArray2D(yDimension.getLength(), xDimension.getLength());
+            this.vars
+                    .put(MANUAL_MASK_NAME,
+                            new GridVariableMetadata(
+                                    MANUAL_MASK_NAME,
+                                    new Parameter(
+                                            MANUAL_MASK_NAME,
+                                            "Manual mask",
+                                            "Manually defined cloud mask",
+                                            "Missing - unset; 0 - clear; 0.33 - probably clear; 0.66 - probably cloud; 1.0 - cloud",
+                                            ""), metadata.getHorizontalDomain(), metadata
+                                            .getVerticalDomain(), metadata.getTemporalDomain(),
+                                    true));
+            /*
              * We now add the composite mask plugin. This will have a domain
              * which is compatible with all other masked variables. However, no
              * variables will be used for masking until they are explicitly set
              */
-            compositePlugin = new CompositeMaskPlugin(allVars);
+            compositePlugin = new CompositeMaskPlugin(MANUAL_MASK_NAME);
             super.addVariablePlugin(compositePlugin);
         }
 
@@ -278,7 +308,7 @@ public final class CloudMaskDatasetFactory extends DatasetFactory {
         public ObservableList<String> getUnmaskedVariableNames() {
             return unmaskedVariables;
         }
-        
+
         public ObservableList<String> getOriginalVariableNames() {
             return originalVariables;
         }
@@ -369,95 +399,113 @@ public final class CloudMaskDatasetFactory extends DatasetFactory {
                 public Array4D<Number> read(String variableId, int tmin, int tmax, int zmin,
                         int zmax, int ymin, int ymax, int xmin, int xmax, final boolean median,
                         final boolean stddev) throws IOException, DataReadingException {
-                    List<Range> ranges = new ArrayList<>();
-                    Array arr;
-                    try {
-                        if (median || stddev) {
-                            if (ymin > 0)
-                                ymin--;
-                            if (xmin > 0)
-                                xmin--;
-                            if (ymax < yDimension.getLength() - 1)
-                                ymax++;
-                            if (xmax < xDimension.getLength() - 1)
-                                xmax++;
-                        }
-                        ranges.add(new Range(ymin, ymax));
-                        ranges.add(new Range(xmin, xmax));
-                        arr = nc.findVariable(variableId).read(ranges);
-                    } catch (InvalidRangeException e) {
-                        e.printStackTrace();
-                        throw new DataReadingException("Problem reading data", e);
-                    }
-                    return new Array4D<Number>(1, 1, (ymax - ymin), (xmax - xmin)) {
-                        @Override
-                        public Number get(int... coords) {
-                            int y = coords[3];
-                            int x = coords[2];
-
-                            if (median) {
-                                if (x == 0 || y == 0 || x == xDimension.getLength() - 1
-                                        || y == yDimension.getLength() - 1) {
-                                    return Float.NaN;
-                                }
-
-                                List<Float> median = new ArrayList<>();
-                                Index index = arr.getIndex();
-                                for (int i = -1; i <= 1; i++) {
-                                    for (int j = -1; j <= 1; j++) {
-                                        index.setDim(1, y + j);
-                                        index.setDim(0, x + i);
-                                        median.add(arr.getFloat(index));
-                                    }
-                                }
-                                Collections.sort(median);
-                                return median.get(4);
-                            } else if (stddev) {
-                                if (x == 0 || y == 0 || x == xDimension.getLength() - 1
-                                        || y == yDimension.getLength() - 1) {
-                                    return Float.NaN;
-                                }
-
-                                float[] values = new float[9];
-                                Index index = arr.getIndex();
-                                int c = 0;
-                                float mean = 0.0f;
-                                for (int i = -1; i <= 1; i++) {
-                                    for (int j = -1; j <= 1; j++) {
-                                        index.setDim(1, y + j);
-                                        index.setDim(0, x + i);
-                                        values[c] = arr.getFloat(index);
-                                        mean += values[c] / 9f;
-                                        c++;
-                                    }
-                                }
-
-                                float var = 0.0f;
-                                for (int i = 0; i < 9; i++) {
-                                    var += (values[i] - mean) * (values[i] - mean);
-                                }
-
-                                return Math.sqrt(var);
-                            } else {
-                                /*
-                                 * Create a new index
-                                 */
-                                Index index = arr.getIndex();
-                                /*
-                                 * Set the index values
-                                 */
-                                index.setDim(1, y);
-                                index.setDim(0, x);
-
-                                return arr.getFloat(index);
+                    final int ys = ymin;
+                    final int xs = xmin;
+                    if (MANUAL_MASK_NAME.equals(variableId)) {
+                        return new Array4D<Number>(1, 1, 1 + (ymax - ymin), 1 + (xmax - xmin)) {
+                            @Override
+                            public Number get(int... coords) {
+                                int y = ys + coords[2];
+                                int x = xs + coords[3];
+                                return manualMask.get(y, x);
                             }
-                        }
 
-                        @Override
-                        public void set(Number value, int... coords) {
-                            throw new UnsupportedOperationException("Immutable array");
+                            @Override
+                            public void set(Number value, int... coords) {
+                                throw new UnsupportedOperationException("Immutable array");
+                            }
+                        };
+                    } else {
+                        List<Range> ranges = new ArrayList<>();
+                        Array arr;
+                        try {
+                            if (median || stddev) {
+                                if (ymin > 0)
+                                    ymin--;
+                                if (xmin > 0)
+                                    xmin--;
+                                if (ymax < yDimension.getLength() - 1)
+                                    ymax++;
+                                if (xmax < xDimension.getLength() - 1)
+                                    xmax++;
+                            }
+                            ranges.add(new Range(ymin, ymax));
+                            ranges.add(new Range(xmin, xmax));
+                            arr = nc.findVariable(variableId).read(ranges);
+                        } catch (InvalidRangeException e) {
+                            e.printStackTrace();
+                            throw new DataReadingException("Problem reading data", e);
                         }
-                    };
+                        return new Array4D<Number>(1, 1, 1 + (ymax - ymin), 1 + (xmax - xmin)) {
+                            @Override
+                            public Number get(int... coords) {
+                                int y = coords[2];
+                                int x = coords[3];
+
+                                if (median) {
+                                    if (x == 0 || y == 0 || x == xDimension.getLength() - 1
+                                            || y == yDimension.getLength() - 1) {
+                                        return Float.NaN;
+                                    }
+
+                                    List<Float> median = new ArrayList<>();
+                                    Index index = arr.getIndex();
+                                    for (int i = -1; i <= 1; i++) {
+                                        for (int j = -1; j <= 1; j++) {
+                                            index.setDim(1, y + j);
+                                            index.setDim(0, x + i);
+                                            median.add(arr.getFloat(index));
+                                        }
+                                    }
+                                    Collections.sort(median);
+                                    return median.get(4);
+                                } else if (stddev) {
+                                    if (x == 0 || y == 0 || x == xDimension.getLength() - 1
+                                            || y == yDimension.getLength() - 1) {
+                                        return Float.NaN;
+                                    }
+
+                                    float[] values = new float[9];
+                                    Index index = arr.getIndex();
+                                    int c = 0;
+                                    float mean = 0.0f;
+                                    for (int i = -1; i <= 1; i++) {
+                                        for (int j = -1; j <= 1; j++) {
+                                            index.setDim(1, y + j);
+                                            index.setDim(0, x + i);
+                                            values[c] = arr.getFloat(index);
+                                            mean += values[c] / 9f;
+                                            c++;
+                                        }
+                                    }
+
+                                    float var = 0.0f;
+                                    for (int i = 0; i < 9; i++) {
+                                        var += (values[i] - mean) * (values[i] - mean);
+                                    }
+
+                                    return Math.sqrt(var);
+                                } else {
+                                    /*
+                                     * Create a new index
+                                     */
+                                    Index index = arr.getIndex();
+                                    /*
+                                     * Set the index values
+                                     */
+                                    index.setDim(0, y);
+                                    index.setDim(1, x);
+
+                                    return arr.getFloat(index);
+                                }
+                            }
+
+                            @Override
+                            public void set(Number value, int... coords) {
+                                throw new UnsupportedOperationException("Immutable array");
+                            }
+                        };
+                    }
                 }
 
                 @Override
@@ -488,8 +536,27 @@ public final class CloudMaskDatasetFactory extends DatasetFactory {
         protected DataReadingStrategy getDataReadingStrategy() {
             return dataReadingStrategy;
         }
+
+        public void setManualMask(GridCoordinates2D coords, Integer value) {
+            manualMask.set(value, coords.getY(), coords.getX());
+        }
     }
 
+    /**
+     * Filters out variables which should be auto-generated. This will be
+     * anything which ends with the mask suffix, manual-cloudmask, and
+     * composite-mask. If present, the attributes of these variables should
+     * be read and the appropriate automatic variables generated correctly
+     * 
+     * @param vars
+     *            The variables to filter
+     * @return A new list containing the filtered variables
+     */
+    private static Collection<GridVariableMetadata> filterVars(
+            Collection<GridVariableMetadata> vars) {
+        return vars;
+    }
+    
     /**
      * Opens the NetCDF dataset at the given location, using the dataset cache
      * if {@code location} represents an NcML aggregation. We cannot use the
@@ -731,10 +798,10 @@ public final class CloudMaskDatasetFactory extends DatasetFactory {
                 throws EdalException {
             VariableMetadata meta = metadata[0];
 
-            diffMeta = newVariableMetadataFromMetadata(new Parameter(getFullId(MaskedDataset.MASK_SUFFIX), meta
-                    .getParameter().getTitle() + " Mask", "Mask of "
-                    + meta.getParameter().getDescription(), "0: unmasked, 1: masked", null), true,
-                    meta);
+            diffMeta = newVariableMetadataFromMetadata(new Parameter(
+                    getFullId(MaskedDataset.MASK_SUFFIX), meta.getParameter().getTitle() + " Mask",
+                    "Mask of " + meta.getParameter().getDescription(), "0: unmasked, 1: masked",
+                    null), true, meta);
             diffMeta.getVariableProperties().put("threshold_min", min);
             diffMeta.getVariableProperties().put("threshold_max", max);
             diffMeta.getVariableProperties().put("threshold_inclusive",

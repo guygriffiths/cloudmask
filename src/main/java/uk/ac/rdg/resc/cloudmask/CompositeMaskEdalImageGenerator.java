@@ -48,8 +48,8 @@ import uk.ac.rdg.resc.edal.metadata.GridVariableMetadata;
 import uk.ac.rdg.resc.edal.util.PlottingDomainParams;
 
 public class CompositeMaskEdalImageGenerator implements ImageGenerator {
-    private Color maskColor = new Color(0, 0, 0, 150);
-    
+    private Color maskColor = new Color(0, 0, 0, 200);
+
     private final int xSize;
     private final int ySize;
     protected MapImage image;
@@ -59,13 +59,17 @@ public class CompositeMaskEdalImageGenerator implements ImageGenerator {
     private String varName;
     private String palette;
 
-    public CompositeMaskEdalImageGenerator(String var, SimpleFeatureCatalogue<MaskedDataset> catalogue)
-            throws IOException, EdalException {
+    private RasterLayer manualLayer;
+    private boolean manualShowing = false;
+
+    public CompositeMaskEdalImageGenerator(String var,
+            SimpleFeatureCatalogue<MaskedDataset> catalogue) throws IOException, EdalException {
         this(var, catalogue, GraphicsUtils.estimateValueRange(catalogue.getDataset(), var));
     }
 
-    public CompositeMaskEdalImageGenerator(String var, SimpleFeatureCatalogue<MaskedDataset> catalogue,
-            Extent<Float> scaleRange) throws IOException, EdalException {
+    public CompositeMaskEdalImageGenerator(String var,
+            SimpleFeatureCatalogue<MaskedDataset> catalogue, Extent<Float> scaleRange)
+            throws IOException, EdalException {
         GridVariableMetadata variableMetadata = (GridVariableMetadata) catalogue.getDataset()
                 .getVariableMetadata(var);
         xSize = variableMetadata.getHorizontalDomain().getXSize();
@@ -77,12 +81,15 @@ public class CompositeMaskEdalImageGenerator implements ImageGenerator {
                 false), null, null, null, palette, 250));
         image = new MapImage();
         image.getLayers().add(rasterLayer);
-        
+
         RasterLayer threshold = new RasterLayer(CompositeMaskPlugin.COMPOSITEMASK,
                 new SegmentColourScheme(new ColourScale(0f, 1f, false), null, null, null,
-                        "#00000000,"+GraphicsUtils.colourToString(maskColor), 2));
+                        "#00000000," + GraphicsUtils.colourToString(maskColor), 4));
         image.getLayers().add(threshold);
         this.varName = var;
+
+        manualLayer = new RasterLayer(MaskedDataset.MANUAL_MASK_NAME, new SegmentColourScheme(
+                new ColourScale(0f, 1f, false), null, null, null, "#aaff0000", 1));
     }
 
     public void setVariable(String var) throws EdalException {
@@ -122,6 +129,16 @@ public class CompositeMaskEdalImageGenerator implements ImageGenerator {
         rasterLayer = new RasterLayer(varName, new SegmentColourScheme(new ColourScale(scaleRange,
                 false), null, null, null, palette, 250));
         image.getLayers().add(0, rasterLayer);
+    }
+
+    public void showMaskedPixels(boolean show) {
+        if (show && !manualShowing) {
+            image.getLayers().add(manualLayer);
+            manualShowing = true;
+        } else if (!show && manualShowing) {
+            image.getLayers().remove(manualLayer);
+            manualShowing = false;
+        }
     }
 
     public Extent<Float> getScaleRange() {

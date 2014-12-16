@@ -39,18 +39,31 @@ import java.util.Map.Entry;
 
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+
+import org.controlsfx.dialog.ExceptionDialog;
+
+import ucar.ma2.InvalidRangeException;
 import uk.ac.rdg.resc.cloudmask.CloudMaskDatasetFactory.MaskedDataset;
 import uk.ac.rdg.resc.edal.dataset.plugins.VariablePlugin;
 import uk.ac.rdg.resc.edal.domain.Extent;
+import uk.ac.rdg.resc.edal.exceptions.DataReadingException;
 import uk.ac.rdg.resc.edal.exceptions.EdalException;
+import uk.ac.rdg.resc.edal.exceptions.VariableNotFoundException;
 import uk.ac.rdg.resc.edal.graphics.style.util.SimpleFeatureCatalogue;
 import uk.ac.rdg.resc.edal.util.Extents;
+import uk.ac.rdg.resc.edal.util.GridCoordinates2D;
 
 public class CloudMaskController {
     private MaskedDataset activeDataset = null;
 
     private List<MaskedVariableView> viewWindows;
-    private ObservableList<String> availableVariables;
+    /** The variables which can be masked */
+    private ObservableList<String> maskableVariables;
+    /**
+     * The variables which can be plotted - this will include all maskable
+     * variables + RGB images
+     */
+    private ObservableList<String> plottableVariables;
     private Map<String, EdalImageGenerator> dataModels;
     private Map<String, UndoRedoManager<UndoState>> undoStacks;
     private Map<String, MaskedVariableView> views;
@@ -66,13 +79,18 @@ public class CloudMaskController {
         undoStacks = new HashMap<>();
         views = new HashMap<>();
         viewWindows = new ArrayList<>();
-        availableVariables = FXCollections.observableArrayList();
+        maskableVariables = FXCollections.observableArrayList();
+        plottableVariables = FXCollections.observableArrayList();
         compositeMaskView = new CompositeMaskView(compositeWidth, compositeHeight, this);
         settingsPane = new SettingsPane(this);
     }
 
-    public ObservableList<String> getAvailableVariables() {
-        return availableVariables;
+    public ObservableList<String> getMaskableVariables() {
+        return maskableVariables;
+    }
+
+    public ObservableList<String> getPlottableVariables() {
+        return plottableVariables;
     }
 
     public void addMaskedVariableView(MaskedVariableView view) {
@@ -115,11 +133,16 @@ public class CloudMaskController {
         }
 
         /*
-         * Reset list of available variables
+         * Reset list of available variables - same for both maskable and
+         * plottable to start with
          */
-        availableVariables.clear();
-        availableVariables.addAll(unmaskedVariables);
-        FXCollections.sort(availableVariables);
+        maskableVariables.clear();
+        maskableVariables.addAll(unmaskedVariables);
+        FXCollections.sort(maskableVariables);
+
+        plottableVariables.clear();
+        plottableVariables.addAll(unmaskedVariables);
+        FXCollections.sort(plottableVariables);
 
         /*
          * Go through list of available variables, sending one to each view in
@@ -142,15 +165,27 @@ public class CloudMaskController {
         settingsPane.setDatasetLoaded(activeDataset);
     }
 
+    public void saveCurrentDataset(File selectedFile) {
+        try {
+            CloudMaskDatasetFactory.writeDataset(activeDataset, selectedFile.getAbsolutePath());
+        } catch (VariableNotFoundException | DataReadingException | IOException
+                | InvalidRangeException e) {
+            ExceptionDialog exceptionDialog = new ExceptionDialog(e);
+            exceptionDialog.show();
+        }
+    }
+
     public void addPlugin(VariablePlugin plugin) {
         try {
             activeDataset.addVariablePlugin(plugin);
-            availableVariables.addAll(plugin.providesVariables());
-//            FXCollections.sort(availableVariables);
-            for (String var : plugin.providesVariables()) {
-                dataModels.put(var, new EdalImageGenerator(var, catalogue));
-                undoStacks.put(var, new UndoRedoManager<>(new UndoState(
-                        dataModels.get(var).scaleRange, activeDataset.getMaskThreshold(var))));
+            plottableVariables.addAll(plugin.providesVariables());
+            if(!(plugin instanceof RgbFalseColourPlugin)) {
+                maskableVariables.addAll(plugin.providesVariables());
+                for (String var : plugin.providesVariables()) {
+                    dataModels.put(var, new EdalImageGenerator(var, catalogue));
+                    undoStacks.put(var, new UndoRedoManager<>(new UndoState(
+                            dataModels.get(var).scaleRange, activeDataset.getMaskThreshold(var))));
+                }
             }
         } catch (EdalException | IOException e) {
             e.printStackTrace();
@@ -167,9 +202,10 @@ public class CloudMaskController {
                             new UndoRedoManager<>(new UndoState(
                                     dataModels.get(variable).scaleRange, activeDataset
                                             .getMaskThreshold(variable))));
-            availableVariables.clear();
-            availableVariables.addAll(activeDataset.getUnmaskedVariableNames());
-//            FXCollections.sort(availableVariables);
+            maskableVariables.add(variable+MaskedDataset.MEDIAN);
+            plottableVariables.add(variable+MaskedDataset.MEDIAN);
+//            maskableVariables.clear();
+//            maskableVariables.addAll(activeDataset.getUnmaskedVariableNames());
         } catch (IOException | EdalException e) {
             e.printStackTrace();
         }
@@ -185,9 +221,10 @@ public class CloudMaskController {
                             new UndoRedoManager<>(new UndoState(
                                     dataModels.get(variable).scaleRange, activeDataset
                                             .getMaskThreshold(variable))));
-            availableVariables.clear();
-            availableVariables.addAll(activeDataset.getUnmaskedVariableNames());
-//            FXCollections.sort(availableVariables);
+            maskableVariables.add(variable+MaskedDataset.STDDEV);
+            plottableVariables.add(variable+MaskedDataset.STDDEV);
+//            maskableVariables.clear();
+//            maskableVariables.addAll(activeDataset.getUnmaskedVariableNames());
         } catch (IOException | EdalException e) {
             e.printStackTrace();
         }
@@ -329,5 +366,12 @@ public class CloudMaskController {
             this.colourScaleRange = colourScaleRange;
             this.maskScaleRange = maskScaleRange;
         }
+    }
+
+    public void setPixelOn(GridCoordinates2D imageCoords, Integer value) {
+        activeDataset.setManualMask(imageCoords, value);
+        catalogue.expireFromCache(CompositeMaskPlugin.COMPOSITEMASK);
+        catalogue.expireFromCache(MaskedDataset.MANUAL_MASK_NAME);
+        compositeMaskView.imageView.updateJustThisImage();
     }
 }

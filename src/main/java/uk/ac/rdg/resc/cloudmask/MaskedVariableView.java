@@ -107,7 +107,7 @@ public class MaskedVariableView extends HBox {
          * callbacks with the controller
          */
         variables = new ListView<>();
-        variables.setItems(controller.getAvailableVariables());
+        variables.setItems(controller.getMaskableVariables());
 
         variables.setPrefWidth(10000);
 
@@ -165,6 +165,7 @@ public class MaskedVariableView extends HBox {
         });
 
         varLabel = new Label("No variable selected");
+        varLabel.setFont(new Font(24));
 
         titleMapMask = new VBox();
         colourbarSettings = new HBox();
@@ -388,9 +389,8 @@ public class MaskedVariableView extends HBox {
 
     public void newModelSelected(EdalImageGenerator imageGenerator) {
         /*
-         * Remove the title and the image view
+         * Remove the image view
          */
-        settings.getChildren().remove(varLabel);
         titleMapMask.getChildren().remove(imageView);
 
         currentVariable = imageGenerator.getVariable();
@@ -436,7 +436,6 @@ public class MaskedVariableView extends HBox {
         exclusiveThreshold.setSelected(!controller.getDataset().isMaskThresholdInclusive(
                 currentVariable));
         includedInMask.setSelected(controller.isVariableInComposite(currentVariable));
-
         disabledCallbacks = false;
 
         /*
@@ -453,10 +452,8 @@ public class MaskedVariableView extends HBox {
         /*
          * Set the title
          */
-        varLabel = new Label(currentVariable);
-        varLabel.setFont(new Font(24));
+        varLabel.textProperty().set(currentVariable);
 
-        settings.getChildren().add(0, varLabel);
         titleMapMask.getChildren().add(0, imageView);
     }
 

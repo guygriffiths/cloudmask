@@ -30,6 +30,7 @@ package uk.ac.rdg.resc.cloudmask.widgets;
 
 import java.awt.image.BufferedImage;
 
+import uk.ac.rdg.resc.edal.position.HorizontalPosition;
 import javafx.concurrent.Task;
 import javafx.concurrent.WorkerStateEvent;
 import javafx.embed.swing.SwingFXUtils;
@@ -37,7 +38,11 @@ import javafx.event.EventHandler;
 import javafx.geometry.Rectangle2D;
 import javafx.scene.image.ImageView;
 import javafx.scene.image.WritableImage;
-import javafx.scene.input.*;
+import javafx.scene.input.MouseButton;
+import javafx.scene.input.MouseEvent;
+import javafx.scene.input.ScrollEvent;
+import javafx.scene.input.TouchEvent;
+import javafx.scene.input.ZoomEvent;
 
 /**
  * A class to provide an {@link ImageView} which is smoothly zoomable,
@@ -203,7 +208,7 @@ public class ZoomableImageView extends ImageView {
         setOnTouchReleased(new EventHandler<TouchEvent>() {
             @Override
             public void handle(TouchEvent event) {
-                touchCount = event.getTouchPoints().size()-1;
+                touchCount = event.getTouchPoints().size() - 1;
             }
         });
 
@@ -240,12 +245,11 @@ public class ZoomableImageView extends ImageView {
                      * We have a touch scroll event, which should be treated as
                      * a pan if done with 2 fingers
                      */
-                    if(!event.isInertia()) {
+                    if (!event.isInertia()) {
                         doPixelDrag(event.getDeltaX(), -event.getDeltaY());
                         updateImageQuick();
                     }
-                } else
-                if(touchCount == 0 && !event.isInertia()) {
+                } else if (touchCount == 0 && !event.isInertia()) {
                     /*
                      * We have a mouse scroll event, which should be treated as
                      * a zoom
@@ -287,7 +291,7 @@ public class ZoomableImageView extends ImageView {
                  * Process the drag by moving the image (without regenerating
                  * it)
                  */
-                if (touchCount==0 && event.getButton() == MouseButton.PRIMARY) {
+                if (touchCount == 0 && event.getButton() == MouseButton.PRIMARY) {
                     double offsetX = (event.getX() - lastDragX);
                     double offsetY = (event.getY() - lastDragY);
                     lastDragX = event.getX();
@@ -571,6 +575,25 @@ public class ZoomableImageView extends ImageView {
             setImage(fxImage);
             setViewport(new Rectangle2D(xoff, yoff, width, height));
         }
+    }
+
+    /**
+     * Gets the underlying co-ordinates from the pixel position on the image.
+     * Useful in conjunction with adding various mouse handlers etc. to this
+     * {@link ImageView}
+     * 
+     * @param x
+     *            The x co-ordinate in pixel space (such as is returned from
+     *            {@link MouseEvent#getX()}
+     * @param y
+     *            The y co-ordinate in pixel space (such as is returned from
+     *            {@link MouseEvent#getX()}
+     * @return A {@link HorizontalPosition} containing the co-ordinates in the
+     *         image generator space
+     */
+    public HorizontalPosition getCoordinateFromImagePosition(double x, double y) {
+        return new HorizontalPosition(minX + (maxX - minX) * (x / width), minY + (maxY - minY)
+                * (1.0 - (y / height)), null);
     }
 
     public interface ImageGenerator {
