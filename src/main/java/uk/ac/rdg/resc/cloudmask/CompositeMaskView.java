@@ -65,11 +65,11 @@ import uk.ac.rdg.resc.edal.util.GridCoordinates2D;
 
 public class CompositeMaskView extends HBox {
     LinkedZoomableImageView imageView = null;
+    CompositeMaskEdalImageGenerator imageGenerator = null;
     private CheckListView<String> variables;
     private Button selectPalette;
     
     private TitledPane pixelType;
-    private CompositeMaskEdalImageGenerator imageGenerator = null;
 
     private int imageWidth;
     private int imageHeight;
@@ -169,11 +169,30 @@ public class CompositeMaskView extends HBox {
             }
         });
         
+        HBox undoRedo = new HBox();
+        Button undo = new Button("Undo");
+        undo.setOnAction(new EventHandler<ActionEvent>() {
+            @Override
+            public void handle(ActionEvent event) {
+                controller.undoLastManualEdit();
+            }
+        });
+        Button redo = new Button("Redo");
+        redo.setOnAction(new EventHandler<ActionEvent>() {
+            @Override
+            public void handle(ActionEvent event) {
+                controller.redoLastManualEdit();
+            }
+        });
+        undoRedo.getChildren().add(undo);
+        undoRedo.getChildren().add(redo);
+        
         VBox widgets = new VBox();
         widgets.getChildren().add(varLabel);
         widgets.getChildren().add(variables);
         widgets.getChildren().add(pixelType);
         widgets.getChildren().add(selectPalette);
+        widgets.getChildren().add(undoRedo);
         
         try {
             setCatalogue(null);

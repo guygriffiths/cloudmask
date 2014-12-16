@@ -540,6 +540,10 @@ public final class CloudMaskDatasetFactory extends DatasetFactory {
         public void setManualMask(GridCoordinates2D coords, Integer value) {
             manualMask.set(value, coords.getY(), coords.getX());
         }
+        
+        public Array2D<Number> getManualMask() {
+            return manualMask;
+        }
     }
 
     /**

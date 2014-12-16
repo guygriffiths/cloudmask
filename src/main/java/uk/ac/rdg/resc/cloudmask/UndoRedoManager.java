@@ -44,6 +44,9 @@ public class UndoRedoManager<T> {
     
     public void setCurrentState(T operation) {
         if(currentState != null) {
+            if(currentState.equals(operation)) {
+                return;
+            }
             undoStack.push(currentState);
         }
         currentState = operation;

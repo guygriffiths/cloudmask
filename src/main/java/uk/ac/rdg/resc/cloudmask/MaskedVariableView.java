@@ -480,7 +480,7 @@ public class MaskedVariableView extends HBox {
         /*
          * Update the view area
          */
-        imageView.updateImage();
+        imageView.updateJustThisImage();
         colourbarSlider.updateValue();
     }
 

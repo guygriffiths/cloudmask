@@ -48,7 +48,7 @@ import uk.ac.rdg.resc.edal.metadata.GridVariableMetadata;
 import uk.ac.rdg.resc.edal.util.PlottingDomainParams;
 
 public class CompositeMaskEdalImageGenerator implements ImageGenerator {
-    private Color maskColor = new Color(0, 0, 0, 200);
+    private Color maskColor = new Color(0, 0, 0, 0.75f);
 
     private final int xSize;
     private final int ySize;
@@ -56,11 +56,13 @@ public class CompositeMaskEdalImageGenerator implements ImageGenerator {
     protected SimpleFeatureCatalogue<MaskedDataset> catalogue;
     protected Extent<Float> scaleRange;
     private RasterLayer rasterLayer;
+    private RasterLayer thresholdLayer;
     private String varName;
     private String palette;
 
     private RasterLayer manualLayer;
     private boolean manualShowing = false;
+
 
     public CompositeMaskEdalImageGenerator(String var,
             SimpleFeatureCatalogue<MaskedDataset> catalogue) throws IOException, EdalException {
@@ -82,10 +84,10 @@ public class CompositeMaskEdalImageGenerator implements ImageGenerator {
         image = new MapImage();
         image.getLayers().add(rasterLayer);
 
-        RasterLayer threshold = new RasterLayer(CompositeMaskPlugin.COMPOSITEMASK,
+        thresholdLayer = new RasterLayer(CompositeMaskPlugin.COMPOSITEMASK,
                 new SegmentColourScheme(new ColourScale(0f, 1f, false), null, null, null,
                         "#00000000," + GraphicsUtils.colourToString(maskColor), 4));
-        image.getLayers().add(threshold);
+        image.getLayers().add(thresholdLayer);
         this.varName = var;
 
         manualLayer = new RasterLayer(MaskedDataset.MANUAL_MASK_NAME, new SegmentColourScheme(
@@ -130,7 +132,7 @@ public class CompositeMaskEdalImageGenerator implements ImageGenerator {
                 false), null, null, null, palette, 250));
         image.getLayers().add(0, rasterLayer);
     }
-
+    
     public void showMaskedPixels(boolean show) {
         if (show && !manualShowing) {
             image.getLayers().add(manualLayer);
@@ -186,5 +188,15 @@ public class CompositeMaskEdalImageGenerator implements ImageGenerator {
     @Override
     public double getMaxValidY() {
         return ySize - 0.5;
+    }
+
+    public void setMaskOpacity(float value) {
+        if (value < 0)
+            value = 0f;
+        if (value > 1)
+            value = 1f;
+        maskColor = new Color(0f, 0f, 0f, value);
+        thresholdLayer.setColourScheme(new SegmentColourScheme(new ColourScale(0f, 1f, false),
+                null, null, null, "#00000000," + GraphicsUtils.colourToString(maskColor), 4));
     }
 }

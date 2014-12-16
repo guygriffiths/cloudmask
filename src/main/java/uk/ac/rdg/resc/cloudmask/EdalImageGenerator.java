@@ -49,8 +49,11 @@ import uk.ac.rdg.resc.edal.metadata.GridVariableMetadata;
 import uk.ac.rdg.resc.edal.util.PlottingDomainParams;
 
 public class EdalImageGenerator implements ImageGenerator {
-    private static final Color maskColor = new Color(0, 0, 0, 150);
-    
+    /*
+     * Share between all instances of EdalImageGenerators
+     */
+    private Color maskColor = new Color(0, 0, 0, 0.75f);
+
     protected final String varName;
     protected final SimpleFeatureCatalogue<MaskedDataset> catalogue;
 
@@ -59,6 +62,7 @@ public class EdalImageGenerator implements ImageGenerator {
 
     protected MapImage image;
     private RasterLayer rasterLayer;
+    private RasterLayer thresholdLayer;
 
     private ColourScheme colourScheme;
     protected Extent<Float> scaleRange;
@@ -92,15 +96,15 @@ public class EdalImageGenerator implements ImageGenerator {
         rasterLayer = new RasterLayer(var, colourScheme);
         image = new MapImage();
         image.getLayers().add(rasterLayer);
-        
-        RasterLayer threshold = new RasterLayer(var + "-" + MaskedDataset.MASK_SUFFIX,
+
+        thresholdLayer = new RasterLayer(var + "-" + MaskedDataset.MASK_SUFFIX,
                 new SegmentColourScheme(new ColourScale(0f, 1f, false), null, null, null,
-                        "#00000000,"+GraphicsUtils.colourToString(maskColor), 2));
-        image.getLayers().add(threshold);
-        
+                        "#00000000," + GraphicsUtils.colourToString(maskColor), 2));
+        image.getLayers().add(thresholdLayer);
+
         this.varName = var;
     }
-    
+
     public String getVariable() {
         return varName;
     }
@@ -114,7 +118,7 @@ public class EdalImageGenerator implements ImageGenerator {
         this.scaleRange = scaleRange;
         refreshColourScheme();
     }
-    
+
     private void refreshColourScheme() {
         if (rgb) {
             colourScheme = new RGBColourScheme();
@@ -124,7 +128,7 @@ public class EdalImageGenerator implements ImageGenerator {
         }
         rasterLayer.setColourScheme(colourScheme);
     }
-    
+
     public boolean isRgb() {
         return rgb;
     }
@@ -152,8 +156,8 @@ public class EdalImageGenerator implements ImageGenerator {
 
     public BufferedImage getLegend(int size, float fracOutOfRangeLow, float fracOutOfRangeHigh,
             boolean vertical) {
-        return colourScheme.getScaleBar(1, size, fracOutOfRangeLow,
-                fracOutOfRangeHigh, vertical, false, null, null);
+        return colourScheme.getScaleBar(1, size, fracOutOfRangeLow, fracOutOfRangeHigh, vertical,
+                false, null, null);
     }
 
     @Override
@@ -176,4 +180,13 @@ public class EdalImageGenerator implements ImageGenerator {
         return ySize - 0.5;
     }
 
+    public void setMaskOpacity(float value) {
+        if (value < 0)
+            value = 0f;
+        if (value > 1)
+            value = 1f;
+        maskColor = new Color(0f, 0f, 0f, value);
+        thresholdLayer.setColourScheme(new SegmentColourScheme(new ColourScale(0f, 1f, false),
+                null, null, null, "#00000000," + GraphicsUtils.colourToString(maskColor), 2));
+    }
 }

@@ -31,12 +31,15 @@ package uk.ac.rdg.resc.cloudmask;
 import java.io.File;
 import java.io.IOException;
 
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
 import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.scene.control.Button;
 import javafx.scene.control.ChoiceBox;
 import javafx.scene.control.Label;
+import javafx.scene.control.Slider;
 import javafx.scene.control.TitledPane;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
@@ -102,8 +105,6 @@ public class SettingsPane extends TitledPane {
         datasetBox.getChildren().add(loadButton);
         currentDatasetLabel = new Label("No dataset loaded");
         datasetBox.getChildren().add(currentDatasetLabel);
-
-        content.getChildren().add(datasetBox);
 
         TitledPane operationsBox = new TitledPane();
         operationsBox.setText("Mathematical Operations");
@@ -235,8 +236,6 @@ public class SettingsPane extends TitledPane {
 
         operationsBox.setContent(operations);
 
-        content.getChildren().add(operationsBox);
-
         Button saveButton = new Button("Save");
         saveButton.setOnAction(new EventHandler<ActionEvent>() {
             @Override
@@ -252,7 +251,22 @@ public class SettingsPane extends TitledPane {
                 }
             }
         });
+
+        Slider maskOpacity = new Slider(0.0, 1.0, 0.75);
+        maskOpacity.valueProperty().addListener(new ChangeListener<Number>() {
+            @Override
+            public void changed(ObservableValue<? extends Number> observable, Number oldVal,
+                    Number newVal) {
+                controller.setMaskOpacity(newVal);
+            }
+        });
+        TitledPane darknessBox = new TitledPane("Mask Opacity", maskOpacity);
+        darknessBox.setCollapsible(false);
+
+        content.getChildren().add(datasetBox);
         content.getChildren().add(saveButton);
+        content.getChildren().add(operationsBox);
+        content.getChildren().add(darknessBox);
 
         setContent(content);
         setPrefWidth(10000);
@@ -276,7 +290,7 @@ public class SettingsPane extends TitledPane {
         medianVar.getSelectionModel().select(0);
         stddevVar.setItems(dataset.getOriginalVariableNames());
         stddevVar.getSelectionModel().select(0);
-        
+
         rgbVar1.setItems(variables);
         rgbVar1.getSelectionModel().select(0);
         rgbVar2.setItems(variables);
