@@ -126,12 +126,8 @@ public class CloudMask extends Application {
         primaryStage.setScene(scene);
         primaryStage.show();
         
-        controller.loadDataset(new File("/home/guy/test_file.nc"));
-    }
-
-    @Override
-    public void stop() throws Exception {
-        super.stop();
-//        CloudMaskDatasetFactory.writeDataset(dataset, "/home/guy/outputtest.nc");
+//        controller.loadDataset(new File("c:/Users/Guy/test_file.nc"));
+//        controller.loadDataset(new File("/home/guy/test_file.nc"));
+        controller.loadDataset(new File("/home/guy/outputtest.nc"));
     }
 }

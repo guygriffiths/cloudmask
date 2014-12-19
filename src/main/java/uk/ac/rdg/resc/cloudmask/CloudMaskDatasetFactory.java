@@ -32,12 +32,12 @@ import java.io.File;
 import java.io.IOException;
 import java.io.StringReader;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -119,15 +119,63 @@ public final class CloudMaskDatasetFactory extends DatasetFactory {
             nc = openAndAggregateDataset(location);
 
             List<GridVariableMetadata> vars = new ArrayList<GridVariableMetadata>();
-
+            Map<String, ThresholdSettings> thresholdMap = new HashMap<>();
             VerticalAxis zDomain = null;
             TimeAxis tDomain = null;
             xDimension = null;
             yDimension = null;
+            Array2D<Number> values = null;
+            String[] maskComponents = null;
             for (Variable var : nc.getVariables()) {
                 if (var.isCoordinateVariable()) {
                     continue;
                 }
+                String varId = var.getFullName();
+
+                if (varId.endsWith(MaskedDataset.MASK_SUFFIX)) {
+                    try {
+                        Attribute thresholdMax = var.findAttribute("threshold_max");
+                        Attribute thresholdMin = var.findAttribute("threshold_min");
+                        Attribute thresholdInclusive = var.findAttribute("threshold_inclusive");
+                        ThresholdSettings threshold = new ThresholdSettings(
+                                (Double) thresholdMin.getValue(0),
+                                (Double) thresholdMax.getValue(0),
+                                Boolean.parseBoolean(thresholdInclusive.getValue(0).toString()));
+                        thresholdMap.put(
+                                varId.substring(0,
+                                        varId.length() - MaskedDataset.MASK_SUFFIX.length() - 1),
+                                threshold);
+                    } catch (Exception e) {
+                    }
+                    continue;
+                } else if (varId.equals(MaskedDataset.MANUAL_MASK_NAME)) {
+                    Array data = var.read();
+                    Index index = data.getIndex();
+                    int[] shape = data.getShape();
+                    int xSize = shape[0];
+                    int ySize = shape[1];
+                    values = new ValuesArray2D(ySize, xSize);
+                    for (int i = 0; i < xSize; i++) {
+                        for (int j = 0; j < ySize; j++) {
+                            index.set(j, i);
+                            float value = data.getFloat(index);
+                            if (!Float.isNaN(value)) {
+                                values.set(value, j, i);
+                            }
+                        }
+                    }
+                    continue;
+                } else if (varId.equals(CompositeMaskPlugin.COMPOSITEMASK)) {
+                    try {
+                        Attribute components = var.findAttribute("mask_components");
+                        String componentsString = (String) components.getValue(0);
+                        maskComponents = componentsString.replaceFirst("manual-cloudmask,", "")
+                                .split(",");
+                    } catch (Exception e) {
+                    }
+                    continue;
+                }
+
                 List<Dimension> dimensions = var.getDimensions();
                 if (dimensions.size() != 2) {
                     throw new IllegalArgumentException(
@@ -152,13 +200,12 @@ public final class CloudMaskDatasetFactory extends DatasetFactory {
                         false);
                 HorizontalGrid hDomain = new RegularGridImpl(xAxis, yAxis, null);
 
-                String varId = var.getFullName();
                 String name = getVariableName(var);
 
                 Parameter parameter = new Parameter(varId, var.getShortName(),
                         var.getDescription(), var.getUnitsString(), name);
-                GridVariableMetadata metadata = new GridVariableMetadata(var.getFullName(),
-                        parameter, hDomain, zDomain, tDomain, true);
+                GridVariableMetadata metadata = new GridVariableMetadata(varId, parameter, hDomain,
+                        zDomain, tDomain, true);
 
                 for (Attribute attr : var.getAttributes()) {
                     String attrName = attr.getFullName();
@@ -171,12 +218,31 @@ public final class CloudMaskDatasetFactory extends DatasetFactory {
                 vars.add(metadata);
             }
 
-            MaskedDataset cdmGridDataset = new MaskedDataset(id, location, vars,
-                    CdmUtils.getOptimumDataReadingStrategy(nc));
+            if (values == null) {
+                values = new ValuesArray2D(yDimension.getLength(), xDimension.getLength());
+            }
+            MaskedDataset maskedDataset = new MaskedDataset(id, location, vars,
+                    CdmUtils.getOptimumDataReadingStrategy(nc), thresholdMap, values);
+            if (maskComponents != null) {
+                maskedDataset.setMaskedVariables(maskComponents);
+            }
 
-            return cdmGridDataset;
+            return maskedDataset;
         } finally {
             CdmUtils.closeDataset(nc);
+        }
+    }
+
+    private final class ThresholdSettings {
+        private double min;
+        private double max;
+        private boolean inclusive;
+
+        public ThresholdSettings(double min, double max, boolean inclusive) {
+            super();
+            this.min = min;
+            this.max = max;
+            this.inclusive = inclusive;
         }
     }
 
@@ -214,12 +280,14 @@ public final class CloudMaskDatasetFactory extends DatasetFactory {
         private Array2D<Number> manualMask;
 
         public MaskedDataset(String id, String location, Collection<GridVariableMetadata> vars,
-                DataReadingStrategy dataReadingStrategy) throws EdalException {
+                DataReadingStrategy dataReadingStrategy,
+                Map<String, ThresholdSettings> thresholdSettings, Array2D<Number> manualMaskVals)
+                throws EdalException {
             super(id, filterVars(vars));
             this.location = location;
             this.dataReadingStrategy = dataReadingStrategy;
 
-            thresholds = new HashMap<>();
+            this.thresholds = new HashMap<>();
             unmaskedVariables = FXCollections.observableArrayList(getVariableIds());
             originalVariables = FXCollections.observableArrayList(getVariableIds());
 
@@ -229,6 +297,12 @@ public final class CloudMaskDatasetFactory extends DatasetFactory {
             for (String var : variableIds) {
                 addMaskToVariable(var);
                 allVars[i++] = var;
+                if (thresholdSettings.containsKey(var)) {
+                    ThresholdSettings ts = thresholdSettings.get(var);
+                    setMaskMinThreshold(var, ts.min);
+                    setMaskMaxThreshold(var, ts.max);
+                    setMaskThresholdInclusive(var, ts.inclusive);
+                }
             }
 
             /*
@@ -237,7 +311,7 @@ public final class CloudMaskDatasetFactory extends DatasetFactory {
              * mask
              */
             GridVariableMetadata metadata = vars.iterator().next();
-            manualMask = new ValuesArray2D(yDimension.getLength(), xDimension.getLength());
+            manualMask = manualMaskVals;
             this.vars
                     .put(MANUAL_MASK_NAME,
                             new GridVariableMetadata(
@@ -298,6 +372,10 @@ public final class CloudMaskDatasetFactory extends DatasetFactory {
 
         public void setMaskedVariables(String... vars) {
             compositePlugin.setMasks(vars);
+        }
+        
+        public String[] getMaskedVariables() {
+            return compositePlugin.usesVariables();
         }
 
         public Extent<Double> getMaskThreshold(String varId) {
@@ -399,9 +477,9 @@ public final class CloudMaskDatasetFactory extends DatasetFactory {
                 public Array4D<Number> read(String variableId, int tmin, int tmax, int zmin,
                         int zmax, int ymin, int ymax, int xmin, int xmax, final boolean median,
                         final boolean stddev) throws IOException, DataReadingException {
-                    final int ys = ymin;
-                    final int xs = xmin;
                     if (MANUAL_MASK_NAME.equals(variableId)) {
+                        final int ys = ymin;
+                        final int xs = xmin;
                         return new Array4D<Number>(1, 1, 1 + (ymax - ymin), 1 + (xmax - xmin)) {
                             @Override
                             public Number get(int... coords) {
@@ -540,7 +618,7 @@ public final class CloudMaskDatasetFactory extends DatasetFactory {
         public void setManualMask(GridCoordinates2D coords, Integer value) {
             manualMask.set(value, coords.getY(), coords.getX());
         }
-        
+
         public Array2D<Number> getManualMask() {
             return manualMask;
         }
@@ -549,18 +627,17 @@ public final class CloudMaskDatasetFactory extends DatasetFactory {
     /**
      * Filters out variables which should be auto-generated. This will be
      * anything which ends with the mask suffix, manual-cloudmask, and
-     * composite-mask. If present, the attributes of these variables should
-     * be read and the appropriate automatic variables generated correctly
+     * composite-mask. If present, the attributes of these variables should be
+     * read and the appropriate automatic variables generated correctly
      * 
      * @param vars
      *            The variables to filter
      * @return A new list containing the filtered variables
      */
-    private static Collection<GridVariableMetadata> filterVars(
-            Collection<GridVariableMetadata> vars) {
+    private static Collection<GridVariableMetadata> filterVars(Collection<GridVariableMetadata> vars) {
         return vars;
     }
-    
+
     /**
      * Opens the NetCDF dataset at the given location, using the dataset cache
      * if {@code location} represents an NcML aggregation. We cannot use the
@@ -831,9 +908,15 @@ public final class CloudMaskDatasetFactory extends DatasetFactory {
             VariableNotFoundException, InvalidRangeException, DataReadingException {
         NetcdfFileWriter fileWriter = NetcdfFileWriter.createNew(Version.netcdf4, location);
 
-        List<String> outputVariables = new ArrayList<>(Arrays.asList(dataset.compositePlugin
-                .usesVariables()));
-        outputVariables.addAll(dataset.getUnmaskedVariableNames());
+        Set<String> outputVariables = new LinkedHashSet<>();
+        outputVariables.addAll(dataset.getOriginalVariableNames());
+        for (String var : dataset.compositePlugin.usesVariables()) {
+            outputVariables.add(var);
+            if (var.endsWith(MaskedDataset.MASK_SUFFIX)) {
+                outputVariables.add(var.substring(0,
+                        var.length() - MaskedDataset.MASK_SUFFIX.length() - 1));
+            }
+        }
         outputVariables.add(CompositeMaskPlugin.COMPOSITEMASK);
 
         Map<Variable, Array> dataToWrite = new HashMap<>();

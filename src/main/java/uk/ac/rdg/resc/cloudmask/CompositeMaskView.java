@@ -30,6 +30,8 @@ package uk.ac.rdg.resc.cloudmask;
 
 import java.awt.image.BufferedImage;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 
 import javafx.beans.value.ChangeListener;
@@ -47,6 +49,7 @@ import javafx.scene.control.TitledPane;
 import javafx.scene.control.ToggleGroup;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
+import javafx.scene.input.ScrollEvent;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.scene.text.Font;
@@ -67,16 +70,23 @@ public class CompositeMaskView extends HBox {
     LinkedZoomableImageView imageView = null;
     CompositeMaskEdalImageGenerator imageGenerator = null;
     private CheckListView<String> variables;
+    /**
+     * For some reason, the variable list gets unchecked when the variables
+     * change. Keep a list of the checked ones and we can set them back again
+     */
+    private List<String> checkedVariables;
     private Button selectPalette;
-    
+
     private TitledPane pixelType;
 
     private int imageWidth;
     private int imageHeight;
     private CloudMaskController controller;
-    
+
     private Integer manualMaskValue = MaskedDataset.MANUAL_CLOUDY;
     private Label varLabel;
+    
+    private boolean disableCheckCallback = false;
 
     public CompositeMaskView(int imageWidth, int imageHeight,
             CloudMaskController cloudMaskController) {
@@ -86,11 +96,26 @@ public class CompositeMaskView extends HBox {
 
         varLabel = new Label("No variable selected");
         varLabel.setFont(new Font(24));
-        
+
+        checkedVariables = new ArrayList<>();
         variables = new CheckListView<>();
         variables.setItems(controller.getPlottableVariables());
         variables.setPrefWidth(10000);
-        
+        /*
+         * When the variables list changes, all variables get unchecked. This
+         * rechecks them...
+         */
+        variables.getItems().addListener(new ListChangeListener<String>() {
+            @Override
+            public void onChanged(Change<? extends String> change) {
+                disableCheckCallback = true;
+                for (String checked : checkedVariables) {
+                    variables.getCheckModel().check(checked);
+                }
+                disableCheckCallback = false;
+            }
+        });
+
         pixelType = new TitledPane();
         pixelType.setText("Manual masking");
         pixelType.setCollapsible(false);
@@ -142,18 +167,18 @@ public class CompositeMaskView extends HBox {
         });
         cloudy.setSelected(true);
         types.getChildren().add(cloudy);
-        
+
         CheckBox showSetPixels = new CheckBox("Highlight manually set pixels");
         showSetPixels.selectedProperty().addListener(new ChangeListener<Boolean>() {
             @Override
-            public void changed(ObservableValue<? extends Boolean> observable, Boolean oldVal, Boolean newVal) {
+            public void changed(ObservableValue<? extends Boolean> observable, Boolean oldVal,
+                    Boolean newVal) {
                 imageGenerator.showMaskedPixels(newVal);
                 imageView.updateJustThisImage();
             }
         });
         types.getChildren().add(showSetPixels);
-        
-        
+
         pixelType.setContent(types);
 
         selectPalette = new Button("Choose colour palette");
@@ -168,7 +193,7 @@ public class CompositeMaskView extends HBox {
                 }
             }
         });
-        
+
         HBox undoRedo = new HBox();
         Button undo = new Button("Undo");
         undo.setOnAction(new EventHandler<ActionEvent>() {
@@ -186,14 +211,14 @@ public class CompositeMaskView extends HBox {
         });
         undoRedo.getChildren().add(undo);
         undoRedo.getChildren().add(redo);
-        
+
         VBox widgets = new VBox();
         widgets.getChildren().add(varLabel);
         widgets.getChildren().add(variables);
         widgets.getChildren().add(pixelType);
         widgets.getChildren().add(selectPalette);
         widgets.getChildren().add(undoRedo);
-        
+
         try {
             setCatalogue(null);
         } catch (EdalException | IOException e) {
@@ -240,6 +265,18 @@ public class CompositeMaskView extends HBox {
                     }
                 }
             });
+            imageView.addEventHandler(ScrollEvent.SCROLL, new EventHandler<ScrollEvent>() {
+                @Override
+                public void handle(ScrollEvent event) {
+                    if (event.getTouchCount() == 1) {
+                        HorizontalPosition coords = imageView.getCoordinateFromImagePosition(
+                                event.getX(), event.getY());
+                        GridCoordinates2D imageCoords = maskGrid.findIndexOf(coords);
+                        controller.setPixelOn(imageCoords, manualMaskValue);
+                    }
+                }
+            });
+
             imageView.addEventHandler(MouseEvent.MOUSE_DRAGGED, new EventHandler<MouseEvent>() {
                 @Override
                 public void handle(MouseEvent event) {
@@ -251,6 +288,7 @@ public class CompositeMaskView extends HBox {
                     }
                 }
             });
+            
 
             variables.getSelectionModel().selectedItemProperty()
                     .addListener(new ChangeListener<String>() {
@@ -271,13 +309,16 @@ public class CompositeMaskView extends HBox {
                         @Override
                         public void onChanged(
                                 javafx.collections.ListChangeListener.Change<? extends String> c) {
-                            String[] mask = new String[variables.getCheckModel().getCheckedItems()
-                                    .size()];
-                            for (int i = 0; i < variables.getCheckModel().getCheckedItems().size(); i++) {
-                                mask[i] = variables.getCheckModel().getCheckedItems().get(i) + "-"
-                                        + MaskedDataset.MASK_SUFFIX;
+                            if(!disableCheckCallback) {
+                                String[] mask = new String[variables.getCheckModel().getCheckedItems()
+                                        .size()];
+                                for (int i = 0; i < variables.getCheckModel().getCheckedItems().size(); i++) {
+                                    String maskedVar = variables.getCheckModel().getCheckedItems().get(i);
+                                    mask[i] = maskedVar + "-" + MaskedDataset.MASK_SUFFIX;
+                                    checkedVariables.add(maskedVar);
+                                }
+                                controller.setMaskedVariables(mask);
                             }
-                            controller.setMaskedVariables(mask);
                         }
                     });
             variables.getSelectionModel().select(0);
@@ -317,10 +358,12 @@ public class CompositeMaskView extends HBox {
 
     public void addToMask(String variable) {
         variables.getCheckModel().check(variable);
+        checkedVariables.add(variable);
     }
 
     public void removeFromMask(String variable) {
         variables.getCheckModel().clearCheck(variable);
+        checkedVariables.remove(variable);
     }
 
     public boolean isVariableIncluded(String variable) {

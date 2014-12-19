@@ -29,6 +29,8 @@
 package uk.ac.rdg.resc.cloudmask;
 
 import java.awt.image.BufferedImage;
+import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Optional;
 
 import javafx.beans.value.ChangeListener;
@@ -36,11 +38,15 @@ import javafx.beans.value.ObservableValue;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.geometry.Orientation;
+import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
+import javafx.scene.control.Alert.AlertType;
+import javafx.scene.input.MouseButton;
+import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
@@ -56,6 +62,7 @@ import uk.ac.rdg.resc.cloudmask.widgets.ZoomableImageView.ImageGenerator;
 import uk.ac.rdg.resc.edal.domain.Extent;
 import uk.ac.rdg.resc.edal.exceptions.VariableNotFoundException;
 import uk.ac.rdg.resc.edal.graphics.style.util.GraphicsUtils;
+import uk.ac.rdg.resc.edal.metadata.VariableMetadata;
 
 public class MaskedVariableView extends HBox {
 
@@ -131,8 +138,6 @@ public class MaskedVariableView extends HBox {
         undoButton = new Button("Undo");
         redoButton = new Button("Redo");
 
-        addCallbacks();
-
         /*
          * Create a new image view with a dummy ImageGenerator
          */
@@ -163,6 +168,8 @@ public class MaskedVariableView extends HBox {
                 return new BufferedImage(width, height, BufferedImage.TYPE_3BYTE_BGR);
             }
         });
+        
+        addCallbacks();
 
         varLabel = new Label("No variable selected");
         varLabel.setFont(new Font(24));
@@ -447,6 +454,55 @@ public class MaskedVariableView extends HBox {
          */
         compositeMaskView.unlinkView(imageView);
         imageView = new LinkedZoomableImageView(imageWidth, imageHeight, imageGenerator);
+        imageView.addEventHandler(MouseEvent.MOUSE_CLICKED, new EventHandler<MouseEvent>() {
+            @Override
+            public void handle(MouseEvent event) {
+                System.out.println("mouse click");
+                if (event.getButton() == MouseButton.SECONDARY) {
+                    System.out.println("right button");
+                    try {
+                        Alert info = new Alert(AlertType.INFORMATION);
+                        info.setTitle(currentVariable);
+                        info.setHeaderText("Information about variable " + currentVariable);
+                        VariableMetadata variableMetadata = controller.getDataset()
+                                .getVariableMetadata(currentVariable);
+                        StringBuilder infoText = new StringBuilder();
+                        infoText.append("Title: " + variableMetadata.getParameter().getTitle()
+                                + "\n");
+                        infoText.append("Description: "
+                                + variableMetadata.getParameter().getDescription() + "\n");
+                        infoText.append("Units: " + variableMetadata.getParameter().getUnits()
+                                + "\n");
+                        Map<String, Object> variableProperties = variableMetadata
+                                .getVariableProperties();
+                        if (variableProperties.size() > 0) {
+                            infoText.append("Properties: \n");
+                            for (Entry<String, Object> prop : variableProperties.entrySet()) {
+                                infoText.append("\t"+prop.getKey() + " : " + prop.getValue()+"\n");
+                            }
+                        }
+                        infoText.append("Colour scale range: " + colourbarSlider.getLowValue()
+                                + " -> " + colourbarSlider.getHighValue() + "\n");
+                        if (exclusiveThreshold.selectedProperty().get()) {
+                            infoText.append("Masking below: " + maskRangeSlider.getLowValue()
+                                    + " and above " + maskRangeSlider.getHighValue() + "\n");
+                        } else {
+                            infoText.append("Masking between: " + maskRangeSlider.getLowValue()
+                                    + " and " + maskRangeSlider.getHighValue() + "\n");
+                        }
+                        if(includedInMask.selectedProperty().get()) {
+                            infoText.append("Included in mask");
+                        }
+
+                        info.setContentText(infoText.toString());
+                        info.showAndWait();
+                    } catch (VariableNotFoundException e) {
+                        e.printStackTrace();
+                    }
+
+                }
+            }
+        });
         compositeMaskView.linkView(imageView);
 
         /*

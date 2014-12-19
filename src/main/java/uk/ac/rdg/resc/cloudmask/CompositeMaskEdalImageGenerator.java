@@ -91,7 +91,7 @@ public class CompositeMaskEdalImageGenerator implements ImageGenerator {
         this.varName = var;
 
         manualLayer = new RasterLayer(MaskedDataset.MANUAL_MASK_NAME, new SegmentColourScheme(
-                new ColourScale(0f, 1f, false), null, null, null, "#aaff0000", 1));
+                new ColourScale(100f, 101f, false), null, null, null, "#aaff0000", 1));
     }
 
     public void setVariable(String var) throws EdalException {

@@ -36,6 +36,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Stack;
 
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -69,7 +70,8 @@ public class CloudMaskController {
     private Map<String, MaskedVariableView> views;
 
     private final CompositeMaskView compositeMaskView;
-    private UndoRedoManager<PixelChange> manualMaskUndoStack;
+    private Stack<PixelChange> manualMaskUndoStack;
+    private Stack<PixelChange> manualMaskRedoStack;
 
     private SimpleFeatureCatalogue<MaskedDataset> catalogue;
 
@@ -84,8 +86,8 @@ public class CloudMaskController {
         plottableVariables = FXCollections.observableArrayList();
         compositeMaskView = new CompositeMaskView(compositeWidth, compositeHeight, this);
         settingsPane = new SettingsPane(this);
-        manualMaskUndoStack = new UndoRedoManager<>(new PixelChange(new GridCoordinates2D(0, 0),
-                null, null));
+        manualMaskUndoStack = new Stack<>();
+        manualMaskRedoStack = new Stack<>();
     }
 
     public ObservableList<String> getMaskableVariables() {
@@ -163,6 +165,13 @@ public class CloudMaskController {
         i = 0;
         for (String var : varsToSet) {
             setVariable(viewWindows.get(i++), var);
+        }
+
+        for (String used : activeDataset.getMaskedVariables()) {
+            if (used.endsWith(MaskedDataset.MASK_SUFFIX)) {
+                setVariableMasked(used.substring(0,
+                        used.length() - 1 - MaskedDataset.MASK_SUFFIX.length()), true);
+            }
         }
 
         settingsPane.setDatasetLoaded(activeDataset);
@@ -323,6 +332,7 @@ public class CloudMaskController {
         activeDataset.setMaskThresholdInclusive(var, inclusive);
         MaskedVariableView view = views.get(var);
         view.redrawImage();
+        compositeMaskView.imageView.updateJustThisImage();
     }
 
     public void setVariableMasked(String variable, boolean masked) {
@@ -372,18 +382,18 @@ public class CloudMaskController {
     }
 
     public void undoLastManualEdit() {
-        PixelChange undo = manualMaskUndoStack.undo();
-        System.out.println("Undo " + undo);
-        if (undo != null) {
+        if (!manualMaskUndoStack.isEmpty()) {
+            PixelChange undo = manualMaskUndoStack.pop();
             setPixelOn(undo.coords, undo.fromValue, false);
+            manualMaskRedoStack.push(undo);
         }
     }
 
     public void redoLastManualEdit() {
-        PixelChange redo = manualMaskUndoStack.redo();
-        System.out.println("Redo " + redo);
-        if (redo != null) {
+        if (!manualMaskRedoStack.isEmpty()) {
+            PixelChange redo = manualMaskRedoStack.pop();
             setPixelOn(redo.coords, redo.toValue, false);
+            manualMaskUndoStack.push(redo);
         }
     }
 
@@ -392,13 +402,22 @@ public class CloudMaskController {
     }
 
     public void setPixelOn(GridCoordinates2D imageCoords, Integer value, boolean saveState) {
+        Number oldValue = activeDataset.getManualMask().get(imageCoords.getY(), imageCoords.getX());
+        if (oldValue == null) {
+            if (value == null) {
+                return;
+            }
+        } else {
+            if (oldValue.equals(value)) {
+                return;
+            }
+        }
+
         if (saveState) {
-            Number oldValue = activeDataset.getManualMask().get(imageCoords.getY(),
-                    imageCoords.getX());
             PixelChange pixelChange = new PixelChange(imageCoords, oldValue == null ? null
                     : oldValue.intValue(), value);
-            manualMaskUndoStack.setCurrentState(pixelChange);
-            System.out.println(pixelChange);
+            manualMaskUndoStack.push(pixelChange);
+            manualMaskRedoStack.clear();
         }
         activeDataset.setManualMask(imageCoords, value);
         catalogue.expireFromCache(CompositeMaskPlugin.COMPOSITEMASK);

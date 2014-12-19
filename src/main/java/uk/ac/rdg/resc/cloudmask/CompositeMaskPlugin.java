@@ -49,7 +49,9 @@ public class CompositeMaskPlugin extends VariablePlugin {
     protected VariableMetadata[] doProcessVariableMetadata(VariableMetadata... metadata)
             throws EdalException {
         compositeMeta = newVariableMetadataFromMetadata(new Parameter(getFullId("mask"),
-                "Composite mask", "Composite mask", "0: unmasked, 1: masked", null), true, metadata);
+                "Composite mask", "Composite mask",
+                "0: clear; 0.33: probably clear; 0.66: probably cloudy; 1: cloudy", null), true,
+                metadata);
         return new VariableMetadata[] { compositeMeta };
     }
 
@@ -69,23 +71,11 @@ public class CompositeMaskPlugin extends VariablePlugin {
          * 3 - Cloud
          */
         if (sourceValues[0] != null) {
-//            switch (sourceValues[0].intValue()) {
-//            case 0:
-//                return 0f;
-//            case 1:
-//                return 0.5f;
-//            case 2:
-//                return 0.75f;
-//            case 3:
-//                return 1.0f;
-//            default:
-//                return 0.25f;
-//            }
             return sourceValues[0].floatValue() / 3.0f;
         }
         for (int i = 1; i < sourceValues.length; i++) {
             if (sourceValues[i].floatValue() > 0) {
-                return 1;
+                return 1f;
             }
         }
         return 0f;
