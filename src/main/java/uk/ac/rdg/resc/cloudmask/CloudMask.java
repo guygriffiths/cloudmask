@@ -28,7 +28,6 @@
 
 package uk.ac.rdg.resc.cloudmask;
 
-import java.io.File;
 import java.util.Properties;
 
 import javafx.application.Application;
@@ -56,6 +55,7 @@ public class CloudMask extends Application {
         String colsStr = properties.getProperty("columns", "2");
         String widthStr = properties.getProperty("imageWidth", "512");
         String heightStr = properties.getProperty("imageHeight", "512");
+        String scaleStr = properties.getProperty("scale", "1.0");
 
         int nRows = 2;
         try {
@@ -88,15 +88,21 @@ public class CloudMask extends Application {
             height = Integer.parseInt(heightStr);
         } catch (NumberFormatException e) {
         }
+        
+        double scale = 1.0;
+        try {
+            scale = Double.parseDouble(scaleStr);
+        } catch (NumberFormatException e) {
+        }
 
         GridPane grid = new GridPane();
 
-        CloudMaskController controller = new CloudMaskController(width, height);
+        CloudMaskController controller = new CloudMaskController(width, height, scale);
 
         int col = 0;
         for (int row = 0; row < nRows; row++) {
             for (col = 0; col < nCols; col++) {
-                MaskedVariableView view = new MaskedVariableView(width, height, controller);
+                MaskedVariableView view = new MaskedVariableView(width, height, scale, controller);
                 grid.add(view, col, row);
             }
         }
@@ -128,6 +134,6 @@ public class CloudMask extends Application {
         
 //        controller.loadDataset(new File("c:/Users/Guy/test_file.nc"));
 //        controller.loadDataset(new File("/home/guy/test_file.nc"));
-        controller.loadDataset(new File("/home/guy/outputtest.nc"));
+//        controller.loadDataset(new File("/home/guy/outputtest.nc"));
     }
 }

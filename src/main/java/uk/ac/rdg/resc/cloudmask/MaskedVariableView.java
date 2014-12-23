@@ -65,7 +65,8 @@ import uk.ac.rdg.resc.edal.graphics.style.util.GraphicsUtils;
 import uk.ac.rdg.resc.edal.metadata.VariableMetadata;
 
 public class MaskedVariableView extends HBox {
-
+    public static final int WIDGET_SPACING = 15;
+    
     private String currentVariable = null;
     private CompositeMaskView compositeMaskView;
     private LinkedZoomableImageView imageView;
@@ -73,6 +74,7 @@ public class MaskedVariableView extends HBox {
     private final CloudMaskController controller;
     private final int imageWidth;
     private final int imageHeight;
+    private final double scale;
 
     private VBox titleMapMask;
     private HBox colourbarSettings;
@@ -97,7 +99,7 @@ public class MaskedVariableView extends HBox {
     private boolean disabledCallbacks = false;
     private VBox settings;
 
-    public MaskedVariableView(int width, int height, CloudMaskController controller) {
+    public MaskedVariableView(int width, int height, double scale, CloudMaskController controller) {
         if (controller == null) {
             throw new IllegalArgumentException("CloudMaskController cannot be null");
         }
@@ -105,6 +107,7 @@ public class MaskedVariableView extends HBox {
 
         this.imageWidth = width;
         this.imageHeight = height;
+        this.scale = scale;
 
         this.controller = controller;
         compositeMaskView = controller.getCompositeMaskView();
@@ -168,6 +171,8 @@ public class MaskedVariableView extends HBox {
                 return new BufferedImage(width, height, BufferedImage.TYPE_3BYTE_BGR);
             }
         });
+        imageView.setFitHeight(imageHeight * scale);
+        imageView.setFitWidth(imageWidth * scale);
         
         addCallbacks();
 
@@ -185,15 +190,15 @@ public class MaskedVariableView extends HBox {
         VBox.setVgrow(maskRangeSlider, Priority.NEVER);
 
         colourbarSettings.getChildren().add(colourbarSlider);
-        settings = new VBox();
+        settings = new VBox(WIDGET_SPACING);
         settings.getChildren().add(varLabel);
         settings.getChildren().add(variables);
 
-        VBox exclusivePalette = new VBox();
+        VBox exclusivePalette = new VBox(WIDGET_SPACING);
         exclusivePalette.getChildren().add(exclusiveThreshold);
         exclusivePalette.getChildren().add(includedInMask);
         exclusivePalette.getChildren().add(selectPalette);
-        HBox historyButtons = new HBox();
+        HBox historyButtons = new HBox(WIDGET_SPACING);
         historyButtons.getChildren().add(undoButton);
         historyButtons.getChildren().add(redoButton);
         historyButtons.getChildren().add(resetView);
@@ -503,6 +508,8 @@ public class MaskedVariableView extends HBox {
                 }
             }
         });
+        imageView.setFitHeight(imageHeight * scale);
+        imageView.setFitWidth(imageWidth * scale);
         compositeMaskView.linkView(imageView);
 
         /*

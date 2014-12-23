@@ -111,8 +111,8 @@ public class SettingsPane extends TitledPane {
         operationsBox.setCollapsible(false);
 
         GridPane operations = new GridPane();
-        operations.setHgap(10);
-        operations.setVgap(10);
+        operations.setHgap(MaskedVariableView.WIDGET_SPACING);
+        operations.setVgap(MaskedVariableView.WIDGET_SPACING);
 
         Label diffLabel = new Label("Difference");
         diffLabel.setMinWidth(150);
@@ -245,7 +245,7 @@ public class SettingsPane extends TitledPane {
                 fileChooser.getExtensionFilters().addAll(
                         new ExtensionFilter("NetCDF Files", "*.nc"),
                         new ExtensionFilter("NcML Files", "*.ncml"));
-                File selectedFile = fileChooser.showOpenDialog(null);
+                File selectedFile = fileChooser.showSaveDialog(null);
                 if (selectedFile != null) {
                     controller.saveCurrentDataset(selectedFile);
                 }

@@ -55,7 +55,7 @@
                         <manifest>
                             <addClasspath>true</addClasspath>
                             <classpathPrefix>lib/</classpathPrefix>
-                            <mainClass>uk.ac.rdg.resc.CloudMask</mainClass>
+                            <mainClass>uk.ac.rdg.resc.cloudmask.CloudMask</mainClass>
                         </manifest>
                     </archive>
                     <finalName>cloud-masker</finalName>
@@ -123,8 +123,33 @@
                 <artifactId>exec-maven-plugin</artifactId>
                 <version>1.1</version>
                 <configuration>
-                    <mainClass>uk.ac.rdg.resc.CloudMask</mainClass>
+                    <mainClass>uk.ac.rdg.resc.cloudmask.CloudMask</mainClass>
                 </configuration>
+            </plugin>
+            <plugin>
+                <artifactId>maven-assembly-plugin</artifactId>
+                <version>2.1</version>
+                <configuration>
+                    <descriptorRefs>
+                        <descriptorRef>
+                            jar-with-dependencies
+                        </descriptorRef>
+                    </descriptorRefs>
+                    <archive>
+                        <manifest>
+                            <addClasspath>true</addClasspath>
+                            <mainClass>uk.ac.rdg.resc.cloudmask.CloudMask</mainClass>
+                        </manifest>
+                    </archive>
+                </configuration>
+                <executions>
+                    <execution>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>single</goal>
+                        </goals>
+                    </execution>
+                </executions>
             </plugin>
         </plugins>
     </build>

@@ -1,3 +1,7 @@
+.slider .thumb {
+	-fx-min-width: 40;
+}
+
 .colourbar-slider {
     -fx-padding: 0 16 0 16;
 }

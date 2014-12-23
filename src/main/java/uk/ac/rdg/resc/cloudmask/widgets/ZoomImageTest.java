@@ -22,7 +22,9 @@ public class ZoomImageTest extends Application {
     public void start(Stage primaryStage) throws Exception {
         primaryStage.setTitle("Zoom Image Test");
 
-        ZoomableImageView image = new ZoomableImageView(500, 500, new MandelbrotImageGenerator());
+        ZoomableImageView image = new ZoomableImageView(100, 100, new MandelbrotImageGenerator());
+        image.setFitHeight(400);
+        image.setFitWidth(400);
         HBox box = new HBox();
         box.getChildren().add(image);
         Label label = new Label();

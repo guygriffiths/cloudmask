@@ -77,14 +77,14 @@ public class CloudMaskController {
 
     private SettingsPane settingsPane;
 
-    public CloudMaskController(int compositeWidth, int compositeHeight) {
+    public CloudMaskController(int compositeWidth, int compositeHeight, double scale) {
         dataModels = new HashMap<>();
         undoStacks = new HashMap<>();
         views = new HashMap<>();
         viewWindows = new ArrayList<>();
         maskableVariables = FXCollections.observableArrayList();
         plottableVariables = FXCollections.observableArrayList();
-        compositeMaskView = new CompositeMaskView(compositeWidth, compositeHeight, this);
+        compositeMaskView = new CompositeMaskView(compositeWidth, compositeHeight, scale, this);
         settingsPane = new SettingsPane(this);
         manualMaskUndoStack = new Stack<>();
         manualMaskRedoStack = new Stack<>();

@@ -79,8 +79,9 @@ public class CompositeMaskView extends HBox {
 
     private TitledPane pixelType;
 
-    private int imageWidth;
-    private int imageHeight;
+    private final int imageWidth;
+    private final int imageHeight;
+    private final double scale;
     private CloudMaskController controller;
 
     private Integer manualMaskValue = MaskedDataset.MANUAL_CLOUDY;
@@ -88,10 +89,11 @@ public class CompositeMaskView extends HBox {
     
     private boolean disableCheckCallback = false;
 
-    public CompositeMaskView(int imageWidth, int imageHeight,
+    public CompositeMaskView(int imageWidth, int imageHeight, double scale,
             CloudMaskController cloudMaskController) {
         this.imageWidth = imageWidth;
         this.imageHeight = imageHeight;
+        this.scale = scale;
         this.controller = cloudMaskController;
 
         varLabel = new Label("No variable selected");
@@ -119,7 +121,7 @@ public class CompositeMaskView extends HBox {
         pixelType = new TitledPane();
         pixelType.setText("Manual masking");
         pixelType.setCollapsible(false);
-        VBox types = new VBox();
+        VBox types = new VBox(MaskedVariableView.WIDGET_SPACING);
         ToggleGroup group = new ToggleGroup();
         RadioButton unset = new RadioButton("Unset");
         unset.setToggleGroup(group);
@@ -194,7 +196,7 @@ public class CompositeMaskView extends HBox {
             }
         });
 
-        HBox undoRedo = new HBox();
+        HBox undoRedo = new HBox(MaskedVariableView.WIDGET_SPACING);
         Button undo = new Button("Undo");
         undo.setOnAction(new EventHandler<ActionEvent>() {
             @Override
@@ -212,7 +214,7 @@ public class CompositeMaskView extends HBox {
         undoRedo.getChildren().add(undo);
         undoRedo.getChildren().add(redo);
 
-        VBox widgets = new VBox();
+        VBox widgets = new VBox(MaskedVariableView.WIDGET_SPACING);
         widgets.getChildren().add(varLabel);
         widgets.getChildren().add(variables);
         widgets.getChildren().add(pixelType);
@@ -352,6 +354,8 @@ public class CompositeMaskView extends HBox {
             });
             imageView.setViewport(new Rectangle2D(0, 0, imageWidth, imageHeight));
         }
+        imageView.setFitHeight(imageHeight * scale);
+        imageView.setFitWidth(imageWidth * scale);
 
         getChildren().add(0, imageView);
     }
