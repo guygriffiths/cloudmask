@@ -31,6 +31,7 @@ package uk.ac.rdg.resc.cloudmask;
 import java.util.Properties;
 
 import javafx.application.Application;
+import javafx.geometry.Insets;
 import javafx.scene.Scene;
 import javafx.scene.layout.ColumnConstraints;
 import javafx.scene.layout.GridPane;
@@ -55,7 +56,7 @@ public class CloudMask extends Application {
         String colsStr = properties.getProperty("columns", "2");
         String widthStr = properties.getProperty("imageWidth", "512");
         String heightStr = properties.getProperty("imageHeight", "512");
-        String scaleStr = properties.getProperty("scale", "1.0");
+        String imageScaleStr = properties.getProperty("scale", "1.0");
 
         int nRows = 2;
         try {
@@ -89,20 +90,23 @@ public class CloudMask extends Application {
         } catch (NumberFormatException e) {
         }
         
-        double scale = 1.0;
+        double imageScale = 1.0;
         try {
-            scale = Double.parseDouble(scaleStr);
+            imageScale = Double.parseDouble(imageScaleStr);
         } catch (NumberFormatException e) {
         }
-
+        
         GridPane grid = new GridPane();
+        grid.setHgap(8);
+        grid.setVgap(8);
+        grid.setPadding(new Insets(4));
 
-        CloudMaskController controller = new CloudMaskController(width, height, scale);
+        CloudMaskController controller = new CloudMaskController(width, height, imageScale, primaryStage);
 
         int col = 0;
         for (int row = 0; row < nRows; row++) {
             for (col = 0; col < nCols; col++) {
-                MaskedVariableView view = new MaskedVariableView(width, height, scale, controller);
+                MaskedVariableView view = new MaskedVariableView(width, height, imageScale, controller);
                 grid.add(view, col, row);
             }
         }

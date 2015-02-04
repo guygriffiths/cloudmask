@@ -51,6 +51,7 @@ import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.input.ScrollEvent;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 import javafx.scene.text.Font;
 
@@ -102,7 +103,7 @@ public class CompositeMaskView extends HBox {
         checkedVariables = new ArrayList<>();
         variables = new CheckListView<>();
         variables.setItems(controller.getPlottableVariables());
-        variables.setPrefWidth(10000);
+        
         /*
          * When the variables list changes, all variables get unchecked. This
          * rechecks them...
@@ -227,6 +228,7 @@ public class CompositeMaskView extends HBox {
             e.printStackTrace();
         }
         getChildren().add(widgets);
+        HBox.setHgrow(widgets, Priority.ALWAYS);
     }
 
     public void linkView(LinkedZoomableImageView imageView) {
@@ -358,6 +360,7 @@ public class CompositeMaskView extends HBox {
         imageView.setFitWidth(imageWidth * scale);
 
         getChildren().add(0, imageView);
+        HBox.setHgrow(imageView, Priority.NEVER);
     }
 
     public void addToMask(String variable) {

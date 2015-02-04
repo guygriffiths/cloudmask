@@ -39,12 +39,12 @@ import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.geometry.Orientation;
 import javafx.scene.control.Alert;
+import javafx.scene.control.Alert.AlertType;
 import javafx.scene.control.Button;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
-import javafx.scene.control.Alert.AlertType;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.HBox;
@@ -76,8 +76,7 @@ public class MaskedVariableView extends HBox {
     private final int imageHeight;
     private final double scale;
 
-    private VBox titleMapMask;
-    private HBox colourbarSettings;
+    private VBox mapMask;
 
     private ListView<String> variables;
     private Label varLabel;
@@ -98,6 +97,7 @@ public class MaskedVariableView extends HBox {
      */
     private boolean disabledCallbacks = false;
     private VBox settings;
+    private Label unitsLabel;
 
     public MaskedVariableView(int width, int height, double scale, CloudMaskController controller) {
         if (controller == null) {
@@ -118,8 +118,7 @@ public class MaskedVariableView extends HBox {
          */
         variables = new ListView<>();
         variables.setItems(controller.getMaskableVariables());
-
-        variables.setPrefWidth(10000);
+        variables.setMaxWidth(Double.MAX_VALUE);
 
         maskRangeSlider = new RangeSlider();
         maskRangeSlider.setShowTickMarks(true);
@@ -128,8 +127,10 @@ public class MaskedVariableView extends HBox {
 
         colourbarSlider = new ColourbarSlider();
         colourbarSlider.setOrientation(Orientation.VERTICAL);
+        colourbarSlider.setShowTickMarks(true);
+        colourbarSlider.setShowTickLabels(true);
 
-        exclusiveThreshold = new CheckBox("Mask outside threshold");
+        exclusiveThreshold = new CheckBox("Mask inside threshold");
         includedInMask = new CheckBox("Included in composite");
 
         selectPalette = new Button("Choose colour palette");
@@ -178,20 +179,25 @@ public class MaskedVariableView extends HBox {
 
         varLabel = new Label("No variable selected");
         varLabel.setFont(new Font(24));
+        varLabel.setMaxWidth(Double.MAX_VALUE);
 
-        titleMapMask = new VBox();
-        colourbarSettings = new HBox();
+        unitsLabel = new Label("units");
+        unitsLabel.setFont(new Font(16));
+        unitsLabel.setMaxWidth(Double.MAX_VALUE);
+        
+        mapMask = new VBox();
 
-        titleMapMask.getChildren().add(imageView);
-        titleMapMask.getChildren().add(maskRangeSlider);
+        mapMask.getChildren().add(imageView);
+        mapMask.getChildren().add(maskRangeSlider);
 
         VBox.setVgrow(imageView, Priority.ALWAYS);
-        VBox.setVgrow(varLabel, Priority.NEVER);
+        VBox.setVgrow(varLabel, Priority.ALWAYS);
+        VBox.setVgrow(unitsLabel, Priority.ALWAYS);
         VBox.setVgrow(maskRangeSlider, Priority.NEVER);
 
-        colourbarSettings.getChildren().add(colourbarSlider);
         settings = new VBox(WIDGET_SPACING);
         settings.getChildren().add(varLabel);
+        settings.getChildren().add(unitsLabel);
         settings.getChildren().add(variables);
 
         VBox exclusivePalette = new VBox(WIDGET_SPACING);
@@ -205,14 +211,15 @@ public class MaskedVariableView extends HBox {
         exclusivePalette.getChildren().add(historyButtons);
 
         settings.getChildren().add(exclusivePalette);
-        VBox.setVgrow(settings, Priority.NEVER);
-        colourbarSettings.getChildren().add(settings);
+        VBox.setVgrow(variables, Priority.ALWAYS);
 
-        getChildren().add(titleMapMask);
-        getChildren().add(colourbarSettings);
+        getChildren().add(mapMask);
+        getChildren().add(colourbarSlider);
+        getChildren().add(settings);
 
-        HBox.setHgrow(titleMapMask, Priority.NEVER);
-        HBox.setHgrow(colourbarSettings, Priority.ALWAYS);
+        HBox.setHgrow(mapMask, Priority.NEVER);
+        HBox.setHgrow(colourbarSlider, Priority.NEVER);
+        HBox.setHgrow(settings, Priority.ALWAYS);
     }
 
     private void addCallbacks() {
@@ -289,6 +296,20 @@ public class MaskedVariableView extends HBox {
                 }
             }
         });
+        maskRangeSlider.minProperty().addListener(new ChangeListener<Number>() {
+            @Override
+            public void changed(ObservableValue<? extends Number> observer, Number oldVal,
+                    Number newVal) {
+                setTickUnit(maskRangeSlider);
+            }
+        });
+        maskRangeSlider.maxProperty().addListener(new ChangeListener<Number>() {
+            @Override
+            public void changed(ObservableValue<? extends Number> observer, Number oldVal,
+                    Number newVal) {
+                setTickUnit(maskRangeSlider);
+            }
+        });
 
         colourbarSlider.lowValueProperty().addListener(new ChangeListener<Number>() {
             @Override
@@ -332,6 +353,20 @@ public class MaskedVariableView extends HBox {
                      */
                     controller.addUndoState(currentVariable);
                 }
+            }
+        });
+        colourbarSlider.minProperty().addListener(new ChangeListener<Number>() {
+            @Override
+            public void changed(ObservableValue<? extends Number> observer, Number oldVal,
+                    Number newVal) {
+                setTickUnit(colourbarSlider);
+            }
+        });
+        colourbarSlider.maxProperty().addListener(new ChangeListener<Number>() {
+            @Override
+            public void changed(ObservableValue<? extends Number> observer, Number oldVal,
+                    Number newVal) {
+                setTickUnit(colourbarSlider);
             }
         });
 
@@ -403,9 +438,10 @@ public class MaskedVariableView extends HBox {
         /*
          * Remove the image view
          */
-        titleMapMask.getChildren().remove(imageView);
+        mapMask.getChildren().remove(imageView);
 
         currentVariable = imageGenerator.getVariable();
+        unitsLabel.setText(imageGenerator.getUnits());
 
         /*
          * Set all scale slider values
@@ -462,9 +498,7 @@ public class MaskedVariableView extends HBox {
         imageView.addEventHandler(MouseEvent.MOUSE_CLICKED, new EventHandler<MouseEvent>() {
             @Override
             public void handle(MouseEvent event) {
-                System.out.println("mouse click");
                 if (event.getButton() == MouseButton.SECONDARY) {
-                    System.out.println("right button");
                     try {
                         Alert info = new Alert(AlertType.INFORMATION);
                         info.setTitle(currentVariable);
@@ -517,7 +551,7 @@ public class MaskedVariableView extends HBox {
          */
         varLabel.textProperty().set(currentVariable);
 
-        titleMapMask.getChildren().add(0, imageView);
+        mapMask.getChildren().add(0, imageView);
     }
 
     public void setMaskSliderLimits(Extent<Float> scaleRange) {
@@ -551,5 +585,19 @@ public class MaskedVariableView extends HBox {
         disabledCallbacks = true;
         includedInMask.setSelected(included);
         disabledCallbacks = false;
+    }
+    
+    private static void setTickUnit(RangeSlider slider) {
+        double unit = (slider.getMax() - slider.getMin()) / 10.0;
+        for(int i= -10; ;i++) {
+            if(Math.pow(10, i)/2 > unit) {
+                unit = Math.pow(10, i)/2;
+                break;
+            } else if(Math.pow(10, i) > unit) {
+                unit = Math.pow(10, i);
+                break;
+            }
+        }
+        slider.setMajorTickUnit(unit);
     }
 }

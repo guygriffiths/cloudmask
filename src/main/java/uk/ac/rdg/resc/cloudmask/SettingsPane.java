@@ -44,6 +44,7 @@ import javafx.scene.control.TitledPane;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
+import javafx.scene.text.Font;
 import javafx.stage.FileChooser;
 import javafx.stage.FileChooser.ExtensionFilter;
 import uk.ac.rdg.resc.cloudmask.CloudMaskDatasetFactory.MaskedDataset;
@@ -104,6 +105,7 @@ public class SettingsPane extends TitledPane {
 
         datasetBox.getChildren().add(loadButton);
         currentDatasetLabel = new Label("No dataset loaded");
+        currentDatasetLabel.setFont(new Font(16));
         datasetBox.getChildren().add(currentDatasetLabel);
 
         TitledPane operationsBox = new TitledPane();
@@ -262,20 +264,36 @@ public class SettingsPane extends TitledPane {
         });
         TitledPane darknessBox = new TitledPane("Mask Opacity", maskOpacity);
         darknessBox.setCollapsible(false);
+        
+        Button toggleFullscreenButton = new Button("Toggle fullscreen");
+        toggleFullscreenButton.setOnAction(new EventHandler<ActionEvent>() {
+            @Override
+            public void handle(ActionEvent event) {
+                controller.toggleFullscreen();
+            }
+        });
 
+        Button exitButton = new Button("Quit");
+        exitButton.setOnAction(new EventHandler<ActionEvent>() {
+            @Override
+            public void handle(ActionEvent event) {
+                controller.quit();
+            }
+        });
+        
         content.getChildren().add(datasetBox);
         content.getChildren().add(saveButton);
         content.getChildren().add(operationsBox);
         content.getChildren().add(darknessBox);
+        content.getChildren().add(toggleFullscreenButton);
+        content.getChildren().add(exitButton);
 
         setContent(content);
         setPrefWidth(10000);
     }
 
     public void setDatasetLoaded(MaskedDataset dataset) {
-        datasetBox.getChildren().remove(currentDatasetLabel);
-        currentDatasetLabel = new Label(dataset.getId());
-        datasetBox.getChildren().add(currentDatasetLabel);
+        currentDatasetLabel.setText(dataset.getId());
 
         ObservableList<String> variables = dataset.getUnmaskedVariableNames();
         diffVar1.setItems(variables);

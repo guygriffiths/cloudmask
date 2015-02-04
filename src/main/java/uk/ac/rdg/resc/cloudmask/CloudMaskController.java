@@ -40,6 +40,7 @@ import java.util.Stack;
 
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+import javafx.stage.Stage;
 
 import org.controlsfx.dialog.ExceptionDialog;
 
@@ -76,8 +77,10 @@ public class CloudMaskController {
     private SimpleFeatureCatalogue<MaskedDataset> catalogue;
 
     private SettingsPane settingsPane;
+    
+    private Stage mainStage;
 
-    public CloudMaskController(int compositeWidth, int compositeHeight, double scale) {
+    public CloudMaskController(int compositeWidth, int compositeHeight, double scale, Stage primaryStage) {
         dataModels = new HashMap<>();
         undoStacks = new HashMap<>();
         views = new HashMap<>();
@@ -88,6 +91,7 @@ public class CloudMaskController {
         settingsPane = new SettingsPane(this);
         manualMaskUndoStack = new Stack<>();
         manualMaskRedoStack = new Stack<>();
+        mainStage = primaryStage;
     }
 
     public ObservableList<String> getMaskableVariables() {
@@ -423,6 +427,14 @@ public class CloudMaskController {
         catalogue.expireFromCache(CompositeMaskPlugin.COMPOSITEMASK);
         catalogue.expireFromCache(MaskedDataset.MANUAL_MASK_NAME);
         compositeMaskView.imageView.updateJustThisImage();
+    }
+    
+    public void toggleFullscreen() {
+        mainStage.setFullScreen(!mainStage.isFullScreen());
+    }
+
+    public void quit() {
+        mainStage.close();
     }
 
     private class UndoState {

@@ -36,6 +36,7 @@ import uk.ac.rdg.resc.cloudmask.CloudMaskDatasetFactory.MaskedDataset;
 import uk.ac.rdg.resc.cloudmask.widgets.ZoomableImageView.ImageGenerator;
 import uk.ac.rdg.resc.edal.domain.Extent;
 import uk.ac.rdg.resc.edal.exceptions.EdalException;
+import uk.ac.rdg.resc.edal.exceptions.VariableNotFoundException;
 import uk.ac.rdg.resc.edal.geometry.BoundingBoxImpl;
 import uk.ac.rdg.resc.edal.graphics.style.ColourScale;
 import uk.ac.rdg.resc.edal.graphics.style.ColourScheme;
@@ -188,5 +189,14 @@ public class EdalImageGenerator implements ImageGenerator {
         maskColor = new Color(0f, 0f, 0f, value);
         thresholdLayer.setColourScheme(new SegmentColourScheme(new ColourScale(0f, 1f, false),
                 null, null, null, "#00000000," + GraphicsUtils.colourToString(maskColor), 2));
+    }
+
+    public String getUnits() {
+        try {
+            return catalogue.getDataset().getVariableMetadata(varName).getParameter().getUnits();
+        } catch (VariableNotFoundException e) {
+            e.printStackTrace();
+            return "";
+        }
     }
 }

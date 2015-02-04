@@ -32,11 +32,14 @@ import java.awt.image.BufferedImage;
 
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
+import javafx.collections.ObservableList;
 import javafx.embed.swing.SwingFXUtils;
 import javafx.geometry.Orientation;
+import javafx.scene.Node;
 import javafx.scene.image.WritableImage;
 import javafx.scene.layout.Background;
 import javafx.scene.layout.BackgroundImage;
+import javafx.scene.layout.StackPane;
 
 import org.controlsfx.control.RangeSlider;
 
@@ -77,7 +80,7 @@ public class ColourbarSlider extends RangeSlider {
                 updateValue();
             }
         });
-        
+
         setHighValue(getMax());
         setLowValue(getMin());
 
@@ -88,7 +91,7 @@ public class ColourbarSlider extends RangeSlider {
                 ColourbarSlider.this.orientation = newVal;
             }
         });
-        
+
         updateValue();
     }
 
@@ -109,7 +112,16 @@ public class ColourbarSlider extends RangeSlider {
             BufferedImage legend = imageGenerator.getLegend((int) getHeight(), belowMin, aboveMax,
                     orientation == Orientation.VERTICAL);
             WritableImage fxImage = SwingFXUtils.toFXImage(legend, null);
-            setBackground(new Background(new BackgroundImage(fxImage, null, null, null, null)));
+            ObservableList<Node> children = getChildren();
+            for (Node node : children) {
+                /*
+                 * This gets the track and sets the background image on it
+                 */
+                if (node.getClass() == StackPane.class) {
+                    ((StackPane) node).setBackground(new Background(new BackgroundImage(fxImage,
+                            null, null, null, null)));
+                }
+            }
         }
     }
 }

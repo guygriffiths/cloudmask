@@ -64,7 +64,7 @@ import ucar.nc2.NetcdfFileWriter.Version;
 import ucar.nc2.Variable;
 import ucar.nc2.dataset.NetcdfDataset;
 import ucar.nc2.ncml.NcMLReader;
-import uk.ac.rdg.resc.edal.dataset.AbstractGridDataset;
+import uk.ac.rdg.resc.edal.dataset.GriddedDataset;
 import uk.ac.rdg.resc.edal.dataset.DataReadingStrategy;
 import uk.ac.rdg.resc.edal.dataset.Dataset;
 import uk.ac.rdg.resc.edal.dataset.DatasetFactory;
@@ -247,7 +247,7 @@ public final class CloudMaskDatasetFactory extends DatasetFactory {
     }
 
     /**
-     * An {@link AbstractGridDataset} which:
+     * An {@link GriddedDataset} which:
      * 
      * Adds masks to each variable
      * 
@@ -258,7 +258,7 @@ public final class CloudMaskDatasetFactory extends DatasetFactory {
      *
      * @author Guy Griffiths
      */
-    public final class MaskedDataset extends AbstractGridDataset {
+    public final class MaskedDataset extends GriddedDataset {
         public final static String MANUAL_MASK_NAME = "manual-cloudmask";
         public final static int MANUAL_CLEAR = 0;
         public final static int MANUAL_PROBABLY_CLEAR = 1;

@@ -338,7 +338,8 @@ public class ZoomableImageView extends ImageView {
          * The centre of the zoom in co-ordinate space
          */
         double coordCentreX = minX + (pixelCentreX / getFitWidth()) * (maxX - minX);
-        double coordCentreY = minY + ((getFitHeight() - pixelCentreY - 1) / getFitHeight()) * (maxY - minY);
+        double coordCentreY = minY + ((getFitHeight() - pixelCentreY - 1) / getFitHeight())
+                * (maxY - minY);
         doZoom(factor, coordCentreX, coordCentreY);
     }
 
@@ -471,8 +472,8 @@ public class ZoomableImageView extends ImageView {
         /*
          * The amount the co-ordinates have changed
          */
-        double coordsChangeX = xPixels * (maxX - minX) / width;
-        double coordsChangeY = yPixels * (maxY - minY) / height;
+        double coordsChangeX = xPixels * (maxX - minX) / getFitWidth();
+        double coordsChangeY = yPixels * (maxY - minY) / getFitHeight();
         doDrag(coordsChangeX, coordsChangeY);
     }
 
@@ -592,8 +593,8 @@ public class ZoomableImageView extends ImageView {
      *         image generator space
      */
     public HorizontalPosition getCoordinateFromImagePosition(double x, double y) {
-        return new HorizontalPosition(minX + (maxX - minX) * (x / getFitWidth()), minY + (maxY - minY)
-                * (1.0 - (y / getFitHeight())), null);
+        return new HorizontalPosition(minX + (maxX - minX) * (x / getFitWidth()), minY
+                + (maxY - minY) * (1.0 - (y / getFitHeight())), null);
     }
 
     public interface ImageGenerator {

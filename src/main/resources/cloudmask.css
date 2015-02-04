@@ -1,11 +1,39 @@
 .slider .thumb {
-	-fx-min-width: 40;
+	-fx-background-radius: 0.2em;
+	-fx-padding: 1.2em; /* This sets the size */
 }
 
 .colourbar-slider {
-    -fx-padding: 0 16 0 16;
+    -fx-padding: 8 0 8 0;
+}
+
+.range-slider .axis .axis-tick-mark, .colourbar-slider .axis .axis-minor-tick-mark {
+	-fx-stroke: black;
+}
+
+.range-slider .axis {
+	-fx-tick-label-fill: black;
+}
+
+.range-slider .low-thumb,
+.range-slider .high-thumb {
+	-fx-background-radius: 0.2em;
+	-fx-padding: 1.2em; /* This sets the size */
+}
+
+.colourbar-slider .track {
+	-fx-padding: 0.8em;
+}
+
+.colourbar-slider .range-bar {
+	-fx-padding: 1em;
+	-fx-opacity: 0;
 }
 
 .mask-slider {
-	-fx-padding: 0 16 0 16;
+	-fx-padding: 2 16 0 16;
+}
+
+.mask-slider .track {
+	-fx-padding: 0.6em;
 }
