@@ -45,6 +45,7 @@ import javafx.scene.control.CheckBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
+import javafx.scene.control.TextField;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.HBox;
@@ -82,6 +83,8 @@ public class MaskedVariableView extends HBox {
     private Label varLabel;
 
     private RangeSlider maskRangeSlider;
+    private TextField minMaskVal;
+    private TextField maxMaskVal;
     private ColourbarSlider colourbarSlider;
     private CheckBox exclusiveThreshold;
     private CheckBox includedInMask;
@@ -124,6 +127,9 @@ public class MaskedVariableView extends HBox {
         maskRangeSlider.setShowTickMarks(true);
         maskRangeSlider.setShowTickLabels(true);
         maskRangeSlider.getStyleClass().add("mask-slider");
+        
+        minMaskVal = new TextField();
+        maxMaskVal = new TextField();
 
         colourbarSlider = new ColourbarSlider();
         colourbarSlider.setOrientation(Orientation.VERTICAL);
@@ -204,13 +210,24 @@ public class MaskedVariableView extends HBox {
         exclusivePalette.getChildren().add(exclusiveThreshold);
         exclusivePalette.getChildren().add(includedInMask);
         exclusivePalette.getChildren().add(selectPalette);
+        
+        VBox maskVals = new VBox();
+        maskVals.getChildren().add(new Label("Minimum mask value:"));
+        maskVals.getChildren().add(minMaskVal);
+        maskVals.getChildren().add(new Label("Maximum mask value:"));
+        maskVals.getChildren().add(maxMaskVal);
+        
+        HBox maskValsExclusive = new HBox(WIDGET_SPACING);
+        maskValsExclusive.getChildren().add(maskVals);
+        maskValsExclusive.getChildren().add(exclusivePalette);
+        
         HBox historyButtons = new HBox(WIDGET_SPACING);
         historyButtons.getChildren().add(undoButton);
         historyButtons.getChildren().add(redoButton);
         historyButtons.getChildren().add(resetView);
-        exclusivePalette.getChildren().add(historyButtons);
 
-        settings.getChildren().add(exclusivePalette);
+        settings.getChildren().add(maskValsExclusive);
+        settings.getChildren().add(historyButtons);
         VBox.setVgrow(variables, Priority.ALWAYS);
 
         getChildren().add(mapMask);
@@ -252,6 +269,30 @@ public class MaskedVariableView extends HBox {
             }
         });
 
+        minMaskVal.setOnAction(new EventHandler<ActionEvent>() {
+            @Override
+            public void handle(ActionEvent event) {
+                try {
+                    double minVal = Double.parseDouble(minMaskVal.getText());
+                    maskRangeSlider.setLowValue(minVal);
+                    controller.addUndoState(currentVariable);
+                } catch (NumberFormatException e) {
+                    minMaskVal.setText(maskRangeSlider.getLowValue()+"");
+                }
+            }
+        });
+        maxMaskVal.setOnAction(new EventHandler<ActionEvent>() {
+            @Override
+            public void handle(ActionEvent event) {
+                try {
+                    double maxVal = Double.parseDouble(maxMaskVal.getText());
+                    maskRangeSlider.setHighValue(maxVal);
+                    controller.addUndoState(currentVariable);
+                } catch (NumberFormatException e) {
+                    maxMaskVal.setText(maskRangeSlider.getHighValue()+"");
+                }
+            }
+        });
         maskRangeSlider.lowValueProperty().addListener(new ChangeListener<Number>() {
             @Override
             public void changed(ObservableValue<? extends Number> observer, Number oldVal,
@@ -260,6 +301,7 @@ public class MaskedVariableView extends HBox {
                     controller.maskThresholdChanged(currentVariable, newVal.floatValue(),
                             (float) maskRangeSlider.getHighValue());
                 }
+                minMaskVal.setText(maskRangeSlider.getLowValue()+"");
             }
         });
         maskRangeSlider.highValueProperty().addListener(new ChangeListener<Number>() {
@@ -270,11 +312,12 @@ public class MaskedVariableView extends HBox {
                     controller.maskThresholdChanged(currentVariable,
                             (float) maskRangeSlider.getLowValue(), newVal.floatValue());
                 }
+                maxMaskVal.setText(maskRangeSlider.getHighValue()+"");
             }
         });
         maskRangeSlider.lowValueChangingProperty().addListener(new ChangeListener<Boolean>() {
             @Override
-            public void changed(ObservableValue<? extends Boolean> arg0, Boolean wasChanging,
+            public void changed(ObservableValue<? extends Boolean> observer, Boolean wasChanging,
                     Boolean changing) {
                 if (!changing) {
                     /*
@@ -286,7 +329,7 @@ public class MaskedVariableView extends HBox {
         });
         maskRangeSlider.highValueChangingProperty().addListener(new ChangeListener<Boolean>() {
             @Override
-            public void changed(ObservableValue<? extends Boolean> arg0, Boolean wasChanging,
+            public void changed(ObservableValue<? extends Boolean> observer, Boolean wasChanging,
                     Boolean changing) {
                 if (!changing) {
                     /*

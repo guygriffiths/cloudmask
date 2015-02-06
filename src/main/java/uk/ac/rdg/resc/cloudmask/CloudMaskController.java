@@ -372,7 +372,6 @@ public class CloudMaskController {
     public void undoLastAction(String var) {
         UndoState undo = undoStacks.get(var).undo();
         if (undo != null) {
-            System.out.println("undo working");
             views.get(var).changeSliderValues(undo.colourScaleRange, undo.maskScaleRange, false);
         }
     }
