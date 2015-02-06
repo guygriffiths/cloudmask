@@ -299,7 +299,6 @@ public class CloudMaskController {
         modelState.setScaleRange(scaleRange);
 
         MaskedVariableView view = views.get(var);
-        view.setMaskSliderLimits(scaleRange);
         view.redrawImage();
     }
 
