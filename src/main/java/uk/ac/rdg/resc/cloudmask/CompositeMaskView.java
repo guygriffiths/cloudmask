@@ -221,6 +221,7 @@ public class CompositeMaskView extends HBox {
         widgets.getChildren().add(pixelType);
         widgets.getChildren().add(selectPalette);
         widgets.getChildren().add(undoRedo);
+        VBox.setVgrow(variables, Priority.ALWAYS);
 
         try {
             setCatalogue(null);
