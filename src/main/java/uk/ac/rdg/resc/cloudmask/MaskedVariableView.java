@@ -33,6 +33,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
 
+import javafx.beans.property.BooleanProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.event.ActionEvent;
@@ -56,6 +57,7 @@ import javafx.util.Callback;
 
 import org.controlsfx.control.RangeSlider;
 
+import uk.ac.rdg.resc.cloudmask.CloudMaskController.MaskVariable;
 import uk.ac.rdg.resc.cloudmask.widgets.ColourbarSlider;
 import uk.ac.rdg.resc.cloudmask.widgets.LinkedZoomableImageView;
 import uk.ac.rdg.resc.cloudmask.widgets.PaletteSelector;
@@ -67,7 +69,7 @@ import uk.ac.rdg.resc.edal.metadata.VariableMetadata;
 
 public class MaskedVariableView extends HBox {
     public static final int WIDGET_SPACING = 15;
-    
+
     private String currentVariable = null;
     private CompositeMaskView compositeMaskView;
     private LinkedZoomableImageView imageView;
@@ -79,7 +81,7 @@ public class MaskedVariableView extends HBox {
 
     private VBox mapMask;
 
-    private ListView<String> variables;
+    private ListView<MaskVariable> variables;
     private Label varLabel;
 
     private RangeSlider maskRangeSlider;
@@ -127,7 +129,7 @@ public class MaskedVariableView extends HBox {
         maskRangeSlider.setShowTickMarks(true);
         maskRangeSlider.setShowTickLabels(true);
         maskRangeSlider.getStyleClass().add("mask-slider");
-        
+
         minMaskVal = new TextField();
         maxMaskVal = new TextField();
 
@@ -180,7 +182,7 @@ public class MaskedVariableView extends HBox {
         });
         imageView.setFitHeight(imageHeight * scale);
         imageView.setFitWidth(imageWidth * scale);
-        
+
         addCallbacks();
 
         varLabel = new Label("No variable selected");
@@ -190,7 +192,7 @@ public class MaskedVariableView extends HBox {
         unitsLabel = new Label("units");
         unitsLabel.setFont(new Font(16));
         unitsLabel.setMaxWidth(Double.MAX_VALUE);
-        
+
         mapMask = new VBox();
 
         mapMask.getChildren().add(imageView);
@@ -210,17 +212,17 @@ public class MaskedVariableView extends HBox {
         exclusivePalette.getChildren().add(exclusiveThreshold);
         exclusivePalette.getChildren().add(includedInMask);
         exclusivePalette.getChildren().add(selectPalette);
-        
+
         VBox maskVals = new VBox();
         maskVals.getChildren().add(new Label("Minimum mask value:"));
         maskVals.getChildren().add(minMaskVal);
         maskVals.getChildren().add(new Label("Maximum mask value:"));
         maskVals.getChildren().add(maxMaskVal);
-        
+
         HBox maskValsExclusive = new HBox(WIDGET_SPACING);
         maskValsExclusive.getChildren().add(maskVals);
         maskValsExclusive.getChildren().add(exclusivePalette);
-        
+
         HBox historyButtons = new HBox(WIDGET_SPACING);
         historyButtons.getChildren().add(undoButton);
         historyButtons.getChildren().add(redoButton);
@@ -241,28 +243,34 @@ public class MaskedVariableView extends HBox {
 
     private void addCallbacks() {
         variables.getSelectionModel().selectedItemProperty()
-                .addListener(new ChangeListener<String>() {
+                .addListener(new ChangeListener<MaskVariable>() {
                     @Override
-                    public void changed(ObservableValue<? extends String> observable,
-                            String oldVar, String newVar) {
-                        controller.setVariable(MaskedVariableView.this, newVar);
+                    public void changed(ObservableValue<? extends MaskVariable> observable,
+                            MaskVariable oldVar, MaskVariable newVar) {
+                        if (newVar != null) {
+                            controller.setVariable(MaskedVariableView.this,
+                                    newVar.variableName.getValue());
+                        }
                     }
                 });
 
-        variables.setCellFactory(new Callback<ListView<String>, ListCell<String>>() {
+        variables.setCellFactory(new Callback<ListView<MaskVariable>, ListCell<MaskVariable>>() {
             @Override
-            public ListCell<String> call(ListView<String> listView) {
-                return new ListCell<String>() {
+            public ListCell<MaskVariable> call(ListView<MaskVariable> listView) {
+                return new ListCell<MaskVariable>() {
                     @Override
-                    protected void updateItem(String item, boolean empty) {
+                    protected void updateItem(MaskVariable item, boolean empty) {
                         super.updateItem(item, empty);
-                        try {
-                            setText(item
-                                    + " ("
-                                    + controller.getDataset().getVariableMetadata(item)
-                                            .getParameter().getDescription() + ")");
-                        } catch (VariableNotFoundException e) {
-                            setText(item);
+                        if (item != null) {
+                            String varName = item.variableName.getValue();
+                            try {
+                                setText(varName
+                                        + " ("
+                                        + controller.getDataset().getVariableMetadata(varName)
+                                                .getParameter().getDescription() + ")");
+                            } catch (VariableNotFoundException e) {
+                                setText(varName);
+                            }
                         }
                     }
                 };
@@ -277,7 +285,7 @@ public class MaskedVariableView extends HBox {
                     maskRangeSlider.setLowValue(minVal);
                     controller.addUndoState(currentVariable);
                 } catch (NumberFormatException e) {
-                    minMaskVal.setText(maskRangeSlider.getLowValue()+"");
+                    minMaskVal.setText(maskRangeSlider.getLowValue() + "");
                 }
             }
         });
@@ -289,7 +297,7 @@ public class MaskedVariableView extends HBox {
                     maskRangeSlider.setHighValue(maxVal);
                     controller.addUndoState(currentVariable);
                 } catch (NumberFormatException e) {
-                    maxMaskVal.setText(maskRangeSlider.getHighValue()+"");
+                    maxMaskVal.setText(maskRangeSlider.getHighValue() + "");
                 }
             }
         });
@@ -301,7 +309,7 @@ public class MaskedVariableView extends HBox {
                     controller.maskThresholdChanged(currentVariable, newVal.floatValue(),
                             (float) maskRangeSlider.getHighValue());
                 }
-                minMaskVal.setText(maskRangeSlider.getLowValue()+"");
+                minMaskVal.setText(maskRangeSlider.getLowValue() + "");
             }
         });
         maskRangeSlider.highValueProperty().addListener(new ChangeListener<Number>() {
@@ -312,7 +320,7 @@ public class MaskedVariableView extends HBox {
                     controller.maskThresholdChanged(currentVariable,
                             (float) maskRangeSlider.getLowValue(), newVal.floatValue());
                 }
-                maxMaskVal.setText(maskRangeSlider.getHighValue()+"");
+                maxMaskVal.setText(maskRangeSlider.getHighValue() + "");
             }
         });
         maskRangeSlider.lowValueChangingProperty().addListener(new ChangeListener<Boolean>() {
@@ -423,16 +431,6 @@ public class MaskedVariableView extends HBox {
             }
         });
 
-        includedInMask.selectedProperty().addListener(new ChangeListener<Boolean>() {
-            @Override
-            public void changed(ObservableValue<? extends Boolean> observer, Boolean oldVal,
-                    Boolean newVal) {
-                if (!disabledCallbacks) {
-                    controller.setVariableMasked(currentVariable, newVal);
-                }
-            }
-        });
-
         selectPalette.setOnAction(new EventHandler<ActionEvent>() {
             @Override
             public void handle(ActionEvent event) {
@@ -483,9 +481,21 @@ public class MaskedVariableView extends HBox {
          */
         mapMask.getChildren().remove(imageView);
 
+        /*
+         * Unbind the current inMask property
+         */
+        BooleanProperty inMaskProperty = controller.variableInMaskProperty(currentVariable);
+        if (inMaskProperty != null) {
+            includedInMask.selectedProperty().unbindBidirectional(inMaskProperty);
+        }
         currentVariable = imageGenerator.getVariable();
         unitsLabel.setText(imageGenerator.getUnits());
 
+        /*
+         * Bind the new inMask property
+         */
+        includedInMask.selectedProperty().bindBidirectional(
+                controller.variableInMaskProperty(currentVariable));
         /*
          * Set all scale slider values
          */
@@ -526,7 +536,7 @@ public class MaskedVariableView extends HBox {
 
         exclusiveThreshold.setSelected(!controller.getDataset().isMaskThresholdInclusive(
                 currentVariable));
-        includedInMask.setSelected(controller.isVariableInComposite(currentVariable));
+
         disabledCallbacks = false;
 
         /*
@@ -560,7 +570,8 @@ public class MaskedVariableView extends HBox {
                         if (variableProperties.size() > 0) {
                             infoText.append("Properties: \n");
                             for (Entry<String, Object> prop : variableProperties.entrySet()) {
-                                infoText.append("\t"+prop.getKey() + " : " + prop.getValue()+"\n");
+                                infoText.append("\t" + prop.getKey() + " : " + prop.getValue()
+                                        + "\n");
                             }
                         }
                         infoText.append("Colour scale range: " + colourbarSlider.getLowValue()
@@ -572,7 +583,7 @@ public class MaskedVariableView extends HBox {
                             infoText.append("Masking between: " + maskRangeSlider.getLowValue()
                                     + " and " + maskRangeSlider.getHighValue() + "\n");
                         }
-                        if(includedInMask.selectedProperty().get()) {
+                        if (includedInMask.selectedProperty().get()) {
                             infoText.append("Included in mask");
                         }
 
@@ -624,19 +635,19 @@ public class MaskedVariableView extends HBox {
         colourbarSlider.updateValue();
     }
 
-    public void setIncludedInMask(boolean included) {
-        disabledCallbacks = true;
-        includedInMask.setSelected(included);
-        disabledCallbacks = false;
-    }
-    
+//    public void setIncludedInMask(boolean included) {
+//        disabledCallbacks = true;
+//        includedInMask.setSelected(included);
+//        disabledCallbacks = false;
+//    }
+
     private static void setTickUnit(RangeSlider slider) {
         double unit = (slider.getMax() - slider.getMin()) / 10.0;
-        for(int i= -10; ;i++) {
-            if(Math.pow(10, i)/2 > unit) {
-                unit = Math.pow(10, i)/2;
+        for (int i = -10;; i++) {
+            if (Math.pow(10, i) / 2 > unit) {
+                unit = Math.pow(10, i) / 2;
                 break;
-            } else if(Math.pow(10, i) > unit) {
+            } else if (Math.pow(10, i) > unit) {
                 unit = Math.pow(10, i);
                 break;
             }

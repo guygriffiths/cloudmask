@@ -30,16 +30,24 @@ package uk.ac.rdg.resc.cloudmask;
 
 import java.io.File;
 import java.io.IOException;
+import java.text.NumberFormat;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Stack;
+import java.util.function.Predicate;
 
+import javafx.beans.property.BooleanProperty;
+import javafx.beans.property.SimpleBooleanProperty;
+import javafx.beans.property.SimpleStringProperty;
+import javafx.beans.property.StringProperty;
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
+import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
+import javafx.collections.transformation.FilteredList;
 import javafx.stage.Stage;
 
 import org.controlsfx.dialog.ExceptionDialog;
@@ -52,6 +60,7 @@ import uk.ac.rdg.resc.edal.exceptions.DataReadingException;
 import uk.ac.rdg.resc.edal.exceptions.EdalException;
 import uk.ac.rdg.resc.edal.exceptions.VariableNotFoundException;
 import uk.ac.rdg.resc.edal.graphics.style.util.SimpleFeatureCatalogue;
+import uk.ac.rdg.resc.edal.position.HorizontalPosition;
 import uk.ac.rdg.resc.edal.util.Extents;
 import uk.ac.rdg.resc.edal.util.GridCoordinates2D;
 
@@ -60,12 +69,14 @@ public class CloudMaskController {
 
     private List<MaskedVariableView> viewWindows;
     /** The variables which can be masked */
-    private ObservableList<String> maskableVariables;
+    private FilteredList<MaskVariable> maskableVariables;
+    /** The variables which are included in the composite */
+    private ObservableList<String> includedVariables;
     /**
      * The variables which can be plotted - this will include all maskable
      * variables + RGB images
      */
-    private ObservableList<String> plottableVariables;
+    private ObservableList<MaskVariable> plottableVariables;
     private Map<String, EdalImageGenerator> dataModels;
     private Map<String, UndoRedoManager<UndoState>> undoStacks;
     private Map<String, MaskedVariableView> views;
@@ -77,16 +88,41 @@ public class CloudMaskController {
     private SimpleFeatureCatalogue<MaskedDataset> catalogue;
 
     private SettingsPane settingsPane;
-    
-    private Stage mainStage;
 
-    public CloudMaskController(int compositeWidth, int compositeHeight, double scale, Stage primaryStage) {
+    private Stage mainStage;
+   
+    public CloudMaskController(int compositeWidth, int compositeHeight, double scale,
+            Stage primaryStage) {
         dataModels = new HashMap<>();
         undoStacks = new HashMap<>();
         views = new HashMap<>();
         viewWindows = new ArrayList<>();
-        maskableVariables = FXCollections.observableArrayList();
         plottableVariables = FXCollections.observableArrayList();
+        maskableVariables = new FilteredList<>(plottableVariables, new Predicate<MaskVariable>() {
+            @Override
+            public boolean test(MaskVariable t) {
+                return t.maskable.get();
+            }
+        });
+        includedVariables = FXCollections.observableArrayList();
+        includedVariables.addListener(new ListChangeListener<String>() {
+            @Override
+            public void onChanged(
+                    javafx.collections.ListChangeListener.Change<? extends String> change) {
+                /*
+                 * When the list of included variables changes, we need to send
+                 * this to the dataset and update the composite image
+                 */
+                catalogue.expireFromCache(CompositeMaskPlugin.COMPOSITEMASK);
+                String[] mask = new String[includedVariables.size()];
+                for (int i = 0; i < includedVariables.size(); i++) {
+                    String maskedVar = includedVariables.get(i);
+                    mask[i] = maskedVar + "-" + MaskedDataset.MASK_SUFFIX;
+                }
+                activeDataset.setMaskedVariables(mask);
+                compositeMaskView.imageView.updateImage();
+            }
+        });
         compositeMaskView = new CompositeMaskView(compositeWidth, compositeHeight, scale, this);
         settingsPane = new SettingsPane(this);
         manualMaskUndoStack = new Stack<>();
@@ -94,11 +130,11 @@ public class CloudMaskController {
         mainStage = primaryStage;
     }
 
-    public ObservableList<String> getMaskableVariables() {
+    public ObservableList<MaskVariable> getMaskableVariables() {
         return maskableVariables;
     }
 
-    public ObservableList<String> getPlottableVariables() {
+    public ObservableList<MaskVariable> getPlottableVariables() {
         return plottableVariables;
     }
 
@@ -135,22 +171,13 @@ public class CloudMaskController {
          */
         dataModels.clear();
         undoStacks.clear();
+        plottableVariables.clear();
         for (String var : unmaskedVariables) {
             dataModels.put(var, new EdalImageGenerator(var, catalogue));
             undoStacks.put(var, new UndoRedoManager<>(new UndoState(dataModels.get(var).scaleRange,
                     activeDataset.getMaskThreshold(var))));
+            plottableVariables.add(new MaskVariable(var, true, false, null));
         }
-
-        /*
-         * Reset list of available variables - same for both maskable and
-         * plottable to start with
-         */
-        maskableVariables.clear();
-        maskableVariables.addAll(unmaskedVariables);
-        FXCollections.sort(maskableVariables);
-
-        plottableVariables.clear();
-        plottableVariables.addAll(unmaskedVariables);
         FXCollections.sort(plottableVariables);
 
         /*
@@ -173,8 +200,13 @@ public class CloudMaskController {
 
         for (String used : activeDataset.getMaskedVariables()) {
             if (used.endsWith(MaskedDataset.MASK_SUFFIX)) {
-                setVariableMasked(used.substring(0,
-                        used.length() - 1 - MaskedDataset.MASK_SUFFIX.length()), true);
+                String varName = used.substring(0,
+                        used.length() - 1 - MaskedDataset.MASK_SUFFIX.length());
+                for (MaskVariable v : plottableVariables) {
+                    if (v.variableName.getValue().equals(varName)) {
+                        v.includedInComposite.setValue(true);
+                    }
+                }
             }
         }
 
@@ -194,14 +226,13 @@ public class CloudMaskController {
     public void addPlugin(VariablePlugin plugin) {
         try {
             activeDataset.addVariablePlugin(plugin);
-            plottableVariables.addAll(plugin.providesVariables());
-            if (!(plugin instanceof RgbFalseColourPlugin)) {
-                maskableVariables.addAll(plugin.providesVariables());
-                for (String var : plugin.providesVariables()) {
-                    dataModels.put(var, new EdalImageGenerator(var, catalogue));
-                    undoStacks.put(var, new UndoRedoManager<>(new UndoState(
-                            dataModels.get(var).scaleRange, activeDataset.getMaskThreshold(var))));
-                }
+            for (String var : plugin.providesVariables()) {
+                dataModels.put(var, new EdalImageGenerator(var, catalogue));
+                undoStacks.put(var, new UndoRedoManager<>(new UndoState(
+                        dataModels.get(var).scaleRange, activeDataset.getMaskThreshold(var))));
+                MaskVariable variable = new MaskVariable(var,
+                        !(plugin instanceof RgbFalseColourPlugin), false, null);
+                plottableVariables.add(variable);
             }
         } catch (EdalException | IOException e) {
             e.printStackTrace();
@@ -218,10 +249,8 @@ public class CloudMaskController {
                             new UndoRedoManager<>(new UndoState(
                                     dataModels.get(variable).scaleRange, activeDataset
                                             .getMaskThreshold(variable))));
-            maskableVariables.add(variable + MaskedDataset.MEDIAN);
-            plottableVariables.add(variable + MaskedDataset.MEDIAN);
-//            maskableVariables.clear();
-//            maskableVariables.addAll(activeDataset.getUnmaskedVariableNames());
+            plottableVariables.add(new MaskVariable(variable + MaskedDataset.MEDIAN, true, false,
+                    null));
         } catch (IOException | EdalException e) {
             e.printStackTrace();
         }
@@ -237,10 +266,8 @@ public class CloudMaskController {
                             new UndoRedoManager<>(new UndoState(
                                     dataModels.get(variable).scaleRange, activeDataset
                                             .getMaskThreshold(variable))));
-            maskableVariables.add(variable + MaskedDataset.STDDEV);
-            plottableVariables.add(variable + MaskedDataset.STDDEV);
-//            maskableVariables.clear();
-//            maskableVariables.addAll(activeDataset.getUnmaskedVariableNames());
+            plottableVariables.add(new MaskVariable(variable + MaskedDataset.STDDEV, true, false,
+                    null));
         } catch (IOException | EdalException e) {
             e.printStackTrace();
         }
@@ -338,29 +365,13 @@ public class CloudMaskController {
         compositeMaskView.imageView.updateJustThisImage();
     }
 
-    public void setVariableMasked(String variable, boolean masked) {
-        if (masked) {
-            compositeMaskView.addToMask(variable);
-        } else {
-            compositeMaskView.removeFromMask(variable);
+    public BooleanProperty variableInMaskProperty(String currentVariable) {
+        for (MaskVariable v : plottableVariables) {
+            if (v.variableName.getValue().equals(currentVariable)) {
+                return v.includedInComposite;
+            }
         }
-    }
-
-    public boolean isVariableInComposite(String variable) {
-        return compositeMaskView.isVariableIncluded(variable);
-    }
-
-    public void setMaskedVariables(String[] mask) {
-        catalogue.expireFromCache(CompositeMaskPlugin.COMPOSITEMASK);
-        activeDataset.setMaskedVariables(mask);
-
-        List<String> maskedVariables = Arrays.asList(mask);
-        for (Entry<String, MaskedVariableView> viewEntry : views.entrySet()) {
-            MaskedVariableView view = viewEntry.getValue();
-            view.setIncludedInMask(maskedVariables.contains(viewEntry.getKey() + "-"
-                    + MaskedDataset.MASK_SUFFIX));
-        }
-        compositeMaskView.imageView.updateImage();
+        return null;
     }
 
     public void addUndoState(String var) {
@@ -426,7 +437,23 @@ public class CloudMaskController {
         catalogue.expireFromCache(MaskedDataset.MANUAL_MASK_NAME);
         compositeMaskView.imageView.updateJustThisImage();
     }
-    
+
+    public void setDataSelectedPosition(HorizontalPosition coords) {
+        for (MaskVariable variable : plottableVariables) {
+            try {
+                Number value = catalogue.getDataset().readSinglePoint(
+                        variable.variableName.getValue(), coords, null, null);
+                if (value != null) {
+                    variable.setValue(value.doubleValue());
+                } else {
+                    variable.setValue(null);
+                }
+            } catch (VariableNotFoundException | DataReadingException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
     public void toggleFullscreen() {
         mainStage.setFullScreen(!mainStage.isFullScreen());
     }
@@ -435,6 +462,75 @@ public class CloudMaskController {
         mainStage.close();
     }
 
+    class MaskVariable implements Comparable<MaskVariable> {
+        /*
+         * Plottable variable list is a list of these.
+         * 
+         * MaskableVariables is a filtered list of these
+         * 
+         * CMV has a table view of these...
+         * 
+         * Controller has a setSelectedLocation method which sets the
+         * selectedValue on all of these...
+         */
+        StringProperty variableName;
+        final BooleanProperty maskable;
+        BooleanProperty includedInComposite;
+        StringProperty selectedValue;
+
+        private NumberFormat valueFormat = NumberFormat.getNumberInstance();
+
+        public MaskVariable(String variableName, boolean maskable, boolean includedInComposite,
+                Number selectedValue) {
+            super();
+            valueFormat.setMinimumFractionDigits(0);
+            valueFormat.setMaximumFractionDigits(4);
+            this.variableName = new SimpleStringProperty(variableName);
+            this.maskable = new SimpleBooleanProperty(maskable);
+            this.includedInComposite = new SimpleBooleanProperty(includedInComposite);
+            this.selectedValue = new SimpleStringProperty();
+            setValue(selectedValue);
+            /*
+             * When this property is changed, add/remove the variable from the
+             * list of included ones
+             */
+            this.includedInComposite.addListener(new ChangeListener<Boolean>() {
+                @Override
+                public void changed(ObservableValue<? extends Boolean> observable, Boolean oldVal,
+                        Boolean newVal) {
+                    if (newVal) {
+                        includedVariables.add(variableName);
+                    } else {
+                        includedVariables.remove(variableName);
+                    }
+                }
+            });
+        }
+
+        public void setValue(Number value) {
+            String str;
+            if (value == null || Double.isNaN(value.doubleValue())) {
+                str = "No data";
+            } else {
+                str = valueFormat.format(value);
+            }
+            this.selectedValue.set(str);
+        }
+
+        @Override
+        public String toString() {
+            return variableName.getValue();
+        }
+
+        @Override
+        public int compareTo(MaskVariable o) {
+            if (variableName == null) {
+                return o == null ? 0 : 1;
+            }
+            return variableName.getValue().compareTo(o.variableName.getValue());
+        }
+    }
+    
     private class UndoState {
         private Extent<Float> colourScaleRange;
         private Extent<Double> maskScaleRange;
