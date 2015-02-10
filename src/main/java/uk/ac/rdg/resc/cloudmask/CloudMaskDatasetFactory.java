@@ -837,13 +837,10 @@ public final class CloudMaskDatasetFactory extends DatasetFactory {
      * @author Guy Griffiths
      */
     private class ThresholdMaskPlugin extends VariablePlugin {
-        /*
-         * TODO add boolean as to which way mask applies
-         */
         private double min;
         private double max;
         private VariableMetadata diffMeta = null;
-        private boolean inclusive = true;
+        private boolean inclusive = false;
 
         public ThresholdMaskPlugin(String var, double min, double max) {
             super(new String[] { var }, new String[] { MaskedDataset.MASK_SUFFIX });
@@ -896,8 +893,8 @@ public final class CloudMaskDatasetFactory extends DatasetFactory {
                 Number... sourceValues) {
             try {
                 if (sourceValues[0].doubleValue() <= min || sourceValues[0].doubleValue() >= max)
-                    return inclusive ? 1 : 0;
-                return inclusive ? 0 : 1;
+                    return inclusive ? 0 : 1;
+                return inclusive ? 1 : 0;
             } catch (NullPointerException e) {
                 return null;
             }

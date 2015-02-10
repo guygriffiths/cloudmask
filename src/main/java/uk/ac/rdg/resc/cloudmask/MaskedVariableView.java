@@ -60,6 +60,7 @@ import org.controlsfx.control.RangeSlider;
 import uk.ac.rdg.resc.cloudmask.CloudMaskController.MaskVariable;
 import uk.ac.rdg.resc.cloudmask.widgets.ColourbarSlider;
 import uk.ac.rdg.resc.cloudmask.widgets.LinkedZoomableImageView;
+import uk.ac.rdg.resc.cloudmask.widgets.MaskRangeSlider;
 import uk.ac.rdg.resc.cloudmask.widgets.PaletteSelector;
 import uk.ac.rdg.resc.cloudmask.widgets.ZoomableImageView.ImageGenerator;
 import uk.ac.rdg.resc.edal.domain.Extent;
@@ -84,11 +85,11 @@ public class MaskedVariableView extends HBox {
     private ListView<MaskVariable> variables;
     private Label varLabel;
 
-    private RangeSlider maskRangeSlider;
+    private MaskRangeSlider maskRangeSlider;
     private TextField minMaskVal;
     private TextField maxMaskVal;
     private ColourbarSlider colourbarSlider;
-    private CheckBox exclusiveThreshold;
+    private CheckBox inclusiveThreshold;
     private CheckBox includedInMask;
     private Button selectPalette;
     private Button resetView;
@@ -125,7 +126,7 @@ public class MaskedVariableView extends HBox {
         variables.setItems(controller.getMaskableVariables());
         variables.setMaxWidth(Double.MAX_VALUE);
 
-        maskRangeSlider = new RangeSlider();
+        maskRangeSlider = new MaskRangeSlider();
         maskRangeSlider.setShowTickMarks(true);
         maskRangeSlider.setShowTickLabels(true);
         maskRangeSlider.getStyleClass().add("mask-slider");
@@ -138,7 +139,7 @@ public class MaskedVariableView extends HBox {
         colourbarSlider.setShowTickMarks(true);
         colourbarSlider.setShowTickLabels(true);
 
-        exclusiveThreshold = new CheckBox("Mask inside threshold");
+        inclusiveThreshold = new CheckBox("Mask inside threshold");
         includedInMask = new CheckBox("Included in composite");
 
         selectPalette = new Button("Choose colour palette");
@@ -209,7 +210,7 @@ public class MaskedVariableView extends HBox {
         settings.getChildren().add(variables);
 
         VBox exclusivePalette = new VBox(WIDGET_SPACING);
-        exclusivePalette.getChildren().add(exclusiveThreshold);
+        exclusivePalette.getChildren().add(inclusiveThreshold);
         exclusivePalette.getChildren().add(includedInMask);
         exclusivePalette.getChildren().add(selectPalette);
 
@@ -421,13 +422,14 @@ public class MaskedVariableView extends HBox {
             }
         });
 
-        exclusiveThreshold.selectedProperty().addListener(new ChangeListener<Boolean>() {
+        inclusiveThreshold.selectedProperty().addListener(new ChangeListener<Boolean>() {
             @Override
             public void changed(ObservableValue<? extends Boolean> observer, Boolean oldVal,
                     Boolean newVal) {
                 if (!disabledCallbacks) {
-                    controller.setMaskThresholdInclusive(currentVariable, !newVal);
+                    controller.setMaskThresholdInclusive(currentVariable, newVal);
                 }
+                maskRangeSlider.setInclusive(newVal);
             }
         });
 
@@ -451,7 +453,7 @@ public class MaskedVariableView extends HBox {
                 colourbarSlider.setHighValue(maxScaleRange.getHigh());
                 maskRangeSlider.setLowValue(maxScaleRange.getLow());
                 maskRangeSlider.setHighValue(maxScaleRange.getHigh());
-                exclusiveThreshold.setSelected(false);
+                inclusiveThreshold.setSelected(false);
                 controller.addUndoState(currentVariable);
             }
         });
@@ -534,8 +536,10 @@ public class MaskedVariableView extends HBox {
         maskRangeSlider.adjustHighValue(maskThreshold.getHigh());
         maskRangeSlider.adjustLowValue(maskThreshold.getLow());
 
-        exclusiveThreshold.setSelected(!controller.getDataset().isMaskThresholdInclusive(
-                currentVariable));
+        boolean inclusive = controller.getDataset().isMaskThresholdInclusive(
+                currentVariable);
+        inclusiveThreshold.setSelected(inclusive);
+        maskRangeSlider.setInclusive(inclusive);
 
         disabledCallbacks = false;
 
@@ -576,7 +580,7 @@ public class MaskedVariableView extends HBox {
                         }
                         infoText.append("Colour scale range: " + colourbarSlider.getLowValue()
                                 + " -> " + colourbarSlider.getHighValue() + "\n");
-                        if (exclusiveThreshold.selectedProperty().get()) {
+                        if (inclusiveThreshold.selectedProperty().get()) {
                             infoText.append("Masking below: " + maskRangeSlider.getLowValue()
                                     + " and above " + maskRangeSlider.getHighValue() + "\n");
                         } else {
