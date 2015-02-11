@@ -509,7 +509,9 @@ public class CloudMaskController {
 
         public void setValue(Number value) {
             String str;
-            if (value == null || Double.isNaN(value.doubleValue())) {
+            if(!maskable.getValue()) {
+                str = "";
+            } else if (value == null || Double.isNaN(value.doubleValue())) {
                 str = "No data";
             } else {
                 str = valueFormat.format(value);

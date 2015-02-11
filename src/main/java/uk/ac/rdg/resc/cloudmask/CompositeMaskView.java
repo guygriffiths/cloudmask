@@ -117,7 +117,7 @@ public class CompositeMaskView extends HBox {
         TableColumn<MaskVariable, String> valCol = new TableColumn<>("Value");
 
         nameCol.prefWidthProperty().bind(variables.widthProperty().subtract(140));
-        includedCol.setPrefWidth(30);
+        includedCol.setPrefWidth(28);
         valCol.setPrefWidth(100);
 
         nameCol.setCellValueFactory(new Callback<TableColumn.CellDataFeatures<MaskVariable, String>, ObservableValue<String>>() {
