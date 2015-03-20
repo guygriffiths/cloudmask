@@ -102,6 +102,9 @@ public class CompositeMaskView extends HBox {
                     @Override
                     public void changed(ObservableValue<? extends MaskVariable> observable,
                             MaskVariable oldVal, MaskVariable newVal) {
+                        if(newVal == null) {
+                            return;
+                        }
                         try {
                             imageGenerator.setVariable(newVal.variableName.getValue());
                             varLabel.textProperty().set(newVal.variableName.getValue());

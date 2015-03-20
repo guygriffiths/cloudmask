@@ -104,25 +104,6 @@ public class CloudMaskController {
                 return t.maskable.get();
             }
         });
-        includedVariables = FXCollections.observableArrayList();
-        includedVariables.addListener(new ListChangeListener<String>() {
-            @Override
-            public void onChanged(
-                    javafx.collections.ListChangeListener.Change<? extends String> change) {
-                /*
-                 * When the list of included variables changes, we need to send
-                 * this to the dataset and update the composite image
-                 */
-                catalogue.expireFromCache(CompositeMaskPlugin.COMPOSITEMASK);
-                String[] mask = new String[includedVariables.size()];
-                for (int i = 0; i < includedVariables.size(); i++) {
-                    String maskedVar = includedVariables.get(i);
-                    mask[i] = maskedVar + "-" + MaskedDataset.MASK_SUFFIX;
-                }
-                activeDataset.setMaskedVariables(mask);
-                compositeMaskView.imageView.updateImage();
-            }
-        });
         compositeMaskView = new CompositeMaskView(compositeWidth, compositeHeight, scale, this);
         settingsPane = new SettingsPane(this);
         manualMaskUndoStack = new Stack<>();
@@ -165,6 +146,8 @@ public class CloudMaskController {
         ObservableList<String> unmaskedVariables = activeDataset.getUnmaskedVariableNames();
 
         compositeMaskView.setCatalogue(catalogue);
+        
+        includedVariables = FXCollections.observableArrayList();
 
         /*
          * Clear data models & repopulate with new ones
@@ -176,7 +159,15 @@ public class CloudMaskController {
             dataModels.put(var, new EdalImageGenerator(var, catalogue));
             undoStacks.put(var, new UndoRedoManager<>(new UndoState(dataModels.get(var).scaleRange,
                     activeDataset.getMaskThreshold(var))));
-            plottableVariables.add(new MaskVariable(var, true, false, null));
+            boolean included = false;
+            for(String testMasked : activeDataset.getMaskedVariables()) {
+                if(var.equalsIgnoreCase(testMasked)) {
+                    included = true;
+                    includedVariables.add(testMasked);
+                    break;
+                }
+            }
+            plottableVariables.add(new MaskVariable(var, true, included, null));
         }
         FXCollections.sort(plottableVariables);
 
@@ -209,6 +200,25 @@ public class CloudMaskController {
                 }
             }
         }
+        
+        includedVariables.addListener(new ListChangeListener<String>() {
+            @Override
+            public void onChanged(
+                    javafx.collections.ListChangeListener.Change<? extends String> change) {
+                /*
+                 * When the list of included variables changes, we need to send
+                 * this to the dataset and update the composite image
+                 */
+                catalogue.expireFromCache(CompositeMaskPlugin.COMPOSITEMASK);
+                String[] mask = new String[includedVariables.size()];
+                for (int i = 0; i < includedVariables.size(); i++) {
+                    String maskedVar = includedVariables.get(i);
+                    mask[i] = maskedVar + "-" + MaskedDataset.MASK_SUFFIX;
+                }
+                activeDataset.setMaskedVariables(mask);
+                compositeMaskView.imageView.updateImage();
+            }
+        });
 
         settingsPane.setDatasetLoaded(activeDataset);
     }
