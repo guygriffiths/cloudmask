@@ -221,8 +221,12 @@ public final class CloudMaskDatasetFactory extends DatasetFactory {
             if (values == null) {
                 values = new ValuesArray2D(yDimension.getLength(), xDimension.getLength());
             }
+            /*
+             * We want to always read with a bounding box - other data reading
+             * strategies will cause median/stddev to fail
+             */
             MaskedDataset maskedDataset = new MaskedDataset(id, location, vars,
-                    CdmUtils.getOptimumDataReadingStrategy(nc), thresholdMap, values);
+                    DataReadingStrategy.BOUNDING_BOX, thresholdMap, values);
             if (maskComponents != null) {
                 maskedDataset.setMaskedVariables(maskComponents);
             }
@@ -373,7 +377,7 @@ public final class CloudMaskDatasetFactory extends DatasetFactory {
         public void setMaskedVariables(String... vars) {
             compositePlugin.setMasks(vars);
         }
-        
+
         public String[] getMaskedVariables() {
             return compositePlugin.usesVariables();
         }
@@ -530,8 +534,8 @@ public final class CloudMaskDatasetFactory extends DatasetFactory {
                                     Index index = arr.getIndex();
                                     for (int i = -1; i <= 1; i++) {
                                         for (int j = -1; j <= 1; j++) {
-                                            index.setDim(1, y + j);
-                                            index.setDim(0, x + i);
+                                            index.setDim(0, y + j);
+                                            index.setDim(1, x + i);
                                             median.add(arr.getFloat(index));
                                         }
                                     }
@@ -549,8 +553,8 @@ public final class CloudMaskDatasetFactory extends DatasetFactory {
                                     float mean = 0.0f;
                                     for (int i = -1; i <= 1; i++) {
                                         for (int j = -1; j <= 1; j++) {
-                                            index.setDim(1, y + j);
-                                            index.setDim(0, x + i);
+                                            index.setDim(0, y + j);
+                                            index.setDim(1, x + i);
                                             values[c] = arr.getFloat(index);
                                             mean += values[c] / 9f;
                                             c++;
