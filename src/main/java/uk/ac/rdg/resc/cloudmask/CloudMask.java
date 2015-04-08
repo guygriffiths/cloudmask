@@ -110,11 +110,12 @@ public class CloudMask extends Application {
                 grid.add(view, col, row);
             }
         }
-        grid.add(controller.getCompositeMaskView(), col, 0);
 
         SettingsPane settings = controller.getSettingsPane();
-        grid.add(settings, col, 1);
+        grid.add(settings, col, 0);
 
+        grid.add(controller.getCompositeMaskView(), col, 1);
+        
         int WINDOW_WIDTH = 500;
         int WINDOW_HEIGHT = 500;
         nCols++;
