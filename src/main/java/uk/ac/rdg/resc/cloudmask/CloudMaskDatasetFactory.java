@@ -643,7 +643,7 @@ public final class CloudMaskDatasetFactory extends DatasetFactory {
                                 for (int yMult = -1; yMult <= 1; yMult += 2) {
                                     int x = coords.getX() + xMult * xAdd;
                                     int y = coords.getY() + yMult * yAdd;
-                                    if (x > 0 && x < values.getXSize() && y > 0
+                                    if (x >= 0 && x < values.getXSize() && y >= 0
                                             && y < values.getYSize()) {
                                         Number oldValue = values.get(0, 0, y, x);
                                         Number oldManualValue = manualMask.get(y, x);
