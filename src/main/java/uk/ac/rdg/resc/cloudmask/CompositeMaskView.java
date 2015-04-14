@@ -43,6 +43,7 @@ import javafx.scene.control.CheckBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.RadioButton;
 import javafx.scene.control.SelectionMode;
+import javafx.scene.control.Slider;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableColumn.CellDataFeatures;
 import javafx.scene.control.TableView;
@@ -75,6 +76,7 @@ public class CompositeMaskView extends HBox {
     private Button selectPalette;
 
     private TitledPane pixelType;
+    private Slider manualSetRadius;
 
     private final int imageWidth;
     private final int imageHeight;
@@ -102,7 +104,7 @@ public class CompositeMaskView extends HBox {
                     @Override
                     public void changed(ObservableValue<? extends MaskVariable> observable,
                             MaskVariable oldVal, MaskVariable newVal) {
-                        if(newVal == null) {
+                        if (newVal == null) {
                             return;
                         }
                         try {
@@ -218,6 +220,14 @@ public class CompositeMaskView extends HBox {
             }
         });
         types.getChildren().add(showSetPixels);
+        
+        manualSetRadius = new Slider(1.0, 50.0, 1.0);
+        manualSetRadius.setShowTickLabels(true);
+        manualSetRadius.setShowTickMarks(true);
+        manualSetRadius.setMajorTickUnit(7.0);
+        manualSetRadius.setSnapToTicks(true);
+        types.getChildren().add(new Label("Manual mask size:"));
+        types.getChildren().add(manualSetRadius);
 
         pixelType.setContent(types);
 
@@ -304,10 +314,11 @@ public class CompositeMaskView extends HBox {
                         HorizontalPosition coords = imageView.getCoordinateFromImagePosition(
                                 event.getX(), event.getY());
                         GridCoordinates2D imageCoords = maskGrid.findIndexOf(coords);
-                        controller.setPixelOn(imageCoords, manualMaskValue);
+                        controller.setManualMask(imageCoords, (int) manualSetRadius.getValue(),
+                                manualMaskValue);
                     } else if (event.getButton() == MouseButton.MIDDLE) {
-                        HorizontalPosition coords = imageView
-                                .getCoordinateFromImagePosition(event.getX(), event.getY());
+                        HorizontalPosition coords = imageView.getCoordinateFromImagePosition(
+                                event.getX(), event.getY());
                         controller.setDataSelectedPosition(coords);
                     }
                 }
@@ -319,7 +330,8 @@ public class CompositeMaskView extends HBox {
                         HorizontalPosition coords = imageView.getCoordinateFromImagePosition(
                                 event.getX(), event.getY());
                         GridCoordinates2D imageCoords = maskGrid.findIndexOf(coords);
-                        controller.setPixelOn(imageCoords, manualMaskValue);
+                        controller.setManualMask(imageCoords, (int) manualSetRadius.getValue(),
+                                manualMaskValue);
                     }
                 }
             });
@@ -331,7 +343,8 @@ public class CompositeMaskView extends HBox {
                         HorizontalPosition coords = imageView.getCoordinateFromImagePosition(
                                 event.getX(), event.getY());
                         GridCoordinates2D imageCoords = maskGrid.findIndexOf(coords);
-                        controller.setPixelOn(imageCoords, manualMaskValue);
+                        controller.setManualMask(imageCoords, (int) manualSetRadius.getValue(),
+                                manualMaskValue);
                     }
                 }
             });

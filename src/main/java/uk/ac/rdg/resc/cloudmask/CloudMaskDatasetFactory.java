@@ -64,11 +64,12 @@ import ucar.nc2.NetcdfFileWriter.Version;
 import ucar.nc2.Variable;
 import ucar.nc2.dataset.NetcdfDataset;
 import ucar.nc2.ncml.NcMLReader;
-import uk.ac.rdg.resc.edal.dataset.GriddedDataset;
+import uk.ac.rdg.resc.cloudmask.CloudMaskController.PixelChange;
 import uk.ac.rdg.resc.edal.dataset.DataReadingStrategy;
 import uk.ac.rdg.resc.edal.dataset.Dataset;
 import uk.ac.rdg.resc.edal.dataset.DatasetFactory;
 import uk.ac.rdg.resc.edal.dataset.GridDataSource;
+import uk.ac.rdg.resc.edal.dataset.GriddedDataset;
 import uk.ac.rdg.resc.edal.dataset.plugins.VariablePlugin;
 import uk.ac.rdg.resc.edal.domain.Extent;
 import uk.ac.rdg.resc.edal.exceptions.DataReadingException;
@@ -619,8 +620,66 @@ public final class CloudMaskDatasetFactory extends DatasetFactory {
             return dataReadingStrategy;
         }
 
-        public void setManualMask(GridCoordinates2D coords, Integer value) {
-            manualMask.set(value, coords.getY(), coords.getX());
+        public List<PixelChange> setManualMask(GridCoordinates2D coords, Integer value, int radius) {
+            List<PixelChange> changes = new ArrayList<>();
+            Array4D<Number> values;
+            try {
+                values = readFeature(CompositeMaskPlugin.COMPOSITEMASK).getValues(
+                        CompositeMaskPlugin.COMPOSITEMASK);
+            } catch (DataReadingException | VariableNotFoundException e) {
+                /*
+                 * There's something seriously wrong if we can't read the
+                 * composite feature. Don't set the mask, print the stack trace,
+                 * and then debug it!
+                 */
+                e.printStackTrace();
+                return null;
+            }
+            for (int r = 1; r <= radius; r++) {
+                for (int xAdd = 0; xAdd < r; xAdd++) {
+                    for (int yAdd = 0; yAdd < r; yAdd++) {
+                        if (Math.sqrt(xAdd * xAdd + yAdd * yAdd) <= r) {
+                            for (int xMult = -1; xMult <= 1; xMult += 2) {
+                                for (int yMult = -1; yMult <= 1; yMult += 2) {
+                                    int x = coords.getX() + xMult * xAdd;
+                                    int y = coords.getY() + yMult * yAdd;
+                                    if (x > 0 && x < values.getXSize() && y > 0
+                                            && y < values.getYSize()) {
+                                        Number oldValue = values.get(0, 0, y, x);
+                                        Number oldManualValue = manualMask.get(y, x);
+                                        if (setManualMaskPixel(x, y, value, oldValue)) {
+                                            /*
+                                             * Add changed pixel to return list
+                                             */
+                                            changes.add(new PixelChange(
+                                                    new GridCoordinates2D(x, y),
+                                                    oldManualValue == null ? null : oldManualValue
+                                                            .intValue(), value));
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            return changes;
+        }
+
+        boolean setManualMaskPixel(int x, int y, Integer newValue, Number oldValue) {
+            if (newValue == null && oldValue != null) {
+                manualMask.set(newValue, y, x);
+                return true;
+            } else if ((MANUAL_CLEAR == newValue && oldValue.intValue() != 0)
+                    || (MANUAL_CLOUDY == newValue && oldValue.intValue() != 1)
+                    || (MANUAL_PROBABLY_CLEAR == newValue) || (MANUAL_PROBABLY_CLOUDY == newValue)) {
+                /*
+                 * Only set cloudy / clear if this changes the composite mask
+                 */
+                manualMask.set(newValue, y, x);
+                return true;
+            }
+            return false;
         }
 
         public Array2D<Number> getManualMask() {
@@ -871,7 +930,8 @@ public final class CloudMaskDatasetFactory extends DatasetFactory {
         public void setThresholdInclusive(boolean inclusive) {
             this.inclusive = inclusive;
             if (diffMeta != null) {
-                diffMeta.getVariableProperties().put("threshold_inclusive", inclusive ? "true" : "false");
+                diffMeta.getVariableProperties().put("threshold_inclusive",
+                        inclusive ? "true" : "false");
             }
         }
 

@@ -139,6 +139,6 @@ public class CloudMask extends Application {
         
 //        controller.loadDataset(new File("c:/Users/Guy/test_file.nc"));
 //        controller.loadDataset(new File("/home/guy/test_file.nc"));
-//        controller.loadDataset(new File("/home/guy/outputtest.nc"));
+//        controller.loadDataset(new File("/home/guy/Data/cloudmask.nc"));
     }
 }

@@ -82,15 +82,15 @@ public class CloudMaskController {
     private Map<String, MaskedVariableView> views;
 
     private final CompositeMaskView compositeMaskView;
-    private Stack<PixelChange> manualMaskUndoStack;
-    private Stack<PixelChange> manualMaskRedoStack;
+    private Stack<List<PixelChange>> manualMaskUndoStack;
+    private Stack<List<PixelChange>> manualMaskRedoStack;
 
     private SimpleFeatureCatalogue<MaskedDataset> catalogue;
 
     private SettingsPane settingsPane;
 
     private Stage mainStage;
-   
+
     public CloudMaskController(int compositeWidth, int compositeHeight, double scale,
             Stage primaryStage) {
         dataModels = new HashMap<>();
@@ -146,7 +146,7 @@ public class CloudMaskController {
         ObservableList<String> unmaskedVariables = activeDataset.getUnmaskedVariableNames();
 
         compositeMaskView.setCatalogue(catalogue);
-        
+
         includedVariables = FXCollections.observableArrayList();
 
         /*
@@ -160,8 +160,8 @@ public class CloudMaskController {
             undoStacks.put(var, new UndoRedoManager<>(new UndoState(dataModels.get(var).scaleRange,
                     activeDataset.getMaskThreshold(var))));
             boolean included = false;
-            for(String testMasked : activeDataset.getMaskedVariables()) {
-                if(var.equalsIgnoreCase(testMasked)) {
+            for (String testMasked : activeDataset.getMaskedVariables()) {
+                if (var.equalsIgnoreCase(testMasked)) {
                     included = true;
                     includedVariables.add(testMasked);
                     break;
@@ -200,7 +200,7 @@ public class CloudMaskController {
                 }
             }
         }
-        
+
         includedVariables.addListener(new ListChangeListener<String>() {
             @Override
             public void onChanged(
@@ -406,43 +406,46 @@ public class CloudMaskController {
 
     public void undoLastManualEdit() {
         if (!manualMaskUndoStack.isEmpty()) {
-            PixelChange undo = manualMaskUndoStack.pop();
-            setPixelOn(undo.coords, undo.fromValue, false);
-            manualMaskRedoStack.push(undo);
+            List<PixelChange> undos = manualMaskUndoStack.pop();
+            for (PixelChange undo : undos) {
+                activeDataset.setManualMaskPixel(undo.coords.getX(), undo.coords.getY(),
+                        undo.fromValue, undo.toValue);
+            }
+            manualMaskRedoStack.push(undos);
+            catalogue.expireFromCache(CompositeMaskPlugin.COMPOSITEMASK);
+            catalogue.expireFromCache(MaskedDataset.MANUAL_MASK_NAME);
+            compositeMaskView.imageView.updateJustThisImage();
         }
     }
 
     public void redoLastManualEdit() {
         if (!manualMaskRedoStack.isEmpty()) {
-            PixelChange redo = manualMaskRedoStack.pop();
-            setPixelOn(redo.coords, redo.toValue, false);
-            manualMaskUndoStack.push(redo);
+            List<PixelChange> redos = manualMaskRedoStack.pop();
+            for (PixelChange redo : redos) {
+                activeDataset.setManualMaskPixel(redo.coords.getX(), redo.coords.getY(),
+                        redo.toValue, redo.fromValue);
+            }
+            manualMaskUndoStack.push(redos);
+            catalogue.expireFromCache(CompositeMaskPlugin.COMPOSITEMASK);
+            catalogue.expireFromCache(MaskedDataset.MANUAL_MASK_NAME);
+            compositeMaskView.imageView.updateJustThisImage();
         }
     }
 
-    public void setPixelOn(GridCoordinates2D imageCoords, Integer value) {
-        setPixelOn(imageCoords, value, true);
+    public void setManualMask(GridCoordinates2D imageCoords, int radius, Integer value) {
+        setManualMask(imageCoords, value, radius, true);
     }
 
-    public void setPixelOn(GridCoordinates2D imageCoords, Integer value, boolean saveState) {
-        Number oldValue = activeDataset.getManualMask().get(imageCoords.getY(), imageCoords.getX());
-        if (oldValue == null) {
-            if (value == null) {
-                return;
-            }
-        } else {
-            if (oldValue.equals(value)) {
-                return;
-            }
+    private void setManualMask(GridCoordinates2D imageCoords, Integer value, int radius,
+            boolean saveState) {
+        if (imageCoords == null) {
+            return;
         }
-
-        if (saveState) {
-            PixelChange pixelChange = new PixelChange(imageCoords, oldValue == null ? null
-                    : oldValue.intValue(), value);
-            manualMaskUndoStack.push(pixelChange);
+        List<PixelChange> changes = activeDataset.setManualMask(imageCoords, value, radius);
+        if (saveState && changes.size() > 0) {
+            manualMaskUndoStack.push(changes);
             manualMaskRedoStack.clear();
         }
-        activeDataset.setManualMask(imageCoords, value);
         catalogue.expireFromCache(CompositeMaskPlugin.COMPOSITEMASK);
         catalogue.expireFromCache(MaskedDataset.MANUAL_MASK_NAME);
         compositeMaskView.imageView.updateJustThisImage();
@@ -519,7 +522,7 @@ public class CloudMaskController {
 
         public void setValue(Number value) {
             String str;
-            if(!maskable.getValue()) {
+            if (!maskable.getValue()) {
                 str = "";
             } else if (value == null || Double.isNaN(value.doubleValue())) {
                 str = "No data";
@@ -542,8 +545,8 @@ public class CloudMaskController {
             return variableName.getValue().compareTo(o.variableName.getValue());
         }
     }
-    
-    private class UndoState {
+
+    private static class UndoState {
         private Extent<Float> colourScaleRange;
         private Extent<Double> maskScaleRange;
 
@@ -556,7 +559,6 @@ public class CloudMaskController {
         public int hashCode() {
             final int prime = 31;
             int result = 1;
-            result = prime * result + getOuterType().hashCode();
             result = prime * result
                     + ((colourScaleRange == null) ? 0 : colourScaleRange.hashCode());
             result = prime * result + ((maskScaleRange == null) ? 0 : maskScaleRange.hashCode());
@@ -572,8 +574,6 @@ public class CloudMaskController {
             if (getClass() != obj.getClass())
                 return false;
             UndoState other = (UndoState) obj;
-            if (!getOuterType().equals(other.getOuterType()))
-                return false;
             if (colourScaleRange == null) {
                 if (other.colourScaleRange != null)
                     return false;
@@ -586,13 +586,9 @@ public class CloudMaskController {
                 return false;
             return true;
         }
-
-        private CloudMaskController getOuterType() {
-            return CloudMaskController.this;
-        }
     }
 
-    private class PixelChange {
+    static class PixelChange {
         GridCoordinates2D coords;
         Integer fromValue;
         Integer toValue;
@@ -613,7 +609,6 @@ public class CloudMaskController {
         public int hashCode() {
             final int prime = 31;
             int result = 1;
-            result = prime * result + getOuterType().hashCode();
             result = prime * result + ((coords == null) ? 0 : coords.hashCode());
             result = prime * result + ((fromValue == null) ? 0 : fromValue.hashCode());
             result = prime * result + ((toValue == null) ? 0 : toValue.hashCode());
@@ -629,8 +624,6 @@ public class CloudMaskController {
             if (getClass() != obj.getClass())
                 return false;
             PixelChange other = (PixelChange) obj;
-            if (!getOuterType().equals(other.getOuterType()))
-                return false;
             if (coords == null) {
                 if (other.coords != null)
                     return false;
@@ -647,10 +640,6 @@ public class CloudMaskController {
             } else if (!toValue.equals(other.toValue))
                 return false;
             return true;
-        }
-
-        private CloudMaskController getOuterType() {
-            return CloudMaskController.this;
         }
     }
 }
