@@ -479,17 +479,23 @@ public final class CloudMaskDatasetFactory extends DatasetFactory {
                 throw new IOException("Problem aggregating datasets", e);
             }
             return new GridDataSource() {
-                public Array4D<Number> read(String variableId, int tmin, int tmax, int zmin,
-                        int zmax, int ymin, int ymax, int xmin, int xmax, final boolean median,
-                        final boolean stddev) throws IOException, DataReadingException {
+
+                private Array4D<Number> readNormal(String variableId, int tmin, int tmax, int zmin,
+                        int zmax, final int ymin, final int ymax, final int xmin, final int xmax)
+                        throws IOException, DataReadingException {
+                    /*
+                     * Reads a variable which doesn't have median/stddev applied
+                     * to it.
+                     * 
+                     * Those cases are more complex because usually more data
+                     * needs to be read than returned
+                     */
                     if (MANUAL_MASK_NAME.equals(variableId)) {
-                        final int ys = ymin;
-                        final int xs = xmin;
                         return new Array4D<Number>(1, 1, 1 + (ymax - ymin), 1 + (xmax - xmin)) {
                             @Override
                             public Number get(int... coords) {
-                                int y = ys + coords[2];
-                                int x = xs + coords[3];
+                                int y = ymin + coords[2];
+                                int x = xmin + coords[3];
                                 return manualMask.get(y, x);
                             }
 
@@ -502,16 +508,6 @@ public final class CloudMaskDatasetFactory extends DatasetFactory {
                         List<Range> ranges = new ArrayList<>();
                         Array arr;
                         try {
-                            if (median || stddev) {
-                                if (ymin > 0)
-                                    ymin--;
-                                if (xmin > 0)
-                                    xmin--;
-                                if (ymax < yDimension.getLength() - 1)
-                                    ymax++;
-                                if (xmax < xDimension.getLength() - 1)
-                                    xmax++;
-                            }
                             ranges.add(new Range(ymin, ymax));
                             ranges.add(new Range(xmin, xmax));
                             arr = nc.findVariable(variableId).read(ranges);
@@ -519,68 +515,20 @@ public final class CloudMaskDatasetFactory extends DatasetFactory {
                             e.printStackTrace();
                             throw new DataReadingException("Problem reading data", e);
                         }
-                        return new Array4D<Number>(1, 1, 1 + (ymax - ymin), 1 + (xmax - xmin)) {
+                        return new Array4D<Number>(1, 1, (ymax - ymin) + 1, (xmax - xmin) + 1) {
                             @Override
                             public Number get(int... coords) {
                                 int y = coords[2];
                                 int x = coords[3];
 
-                                if (median) {
-                                    if (x == 0 || y == 0 || x == xDimension.getLength() - 1
-                                            || y == yDimension.getLength() - 1) {
-                                        return Float.NaN;
-                                    }
+                                /*
+                                 * We are reading
+                                 */
+                                Index index = arr.getIndex();
+                                index.setDim(0, y);
+                                index.setDim(1, x);
 
-                                    List<Float> median = new ArrayList<>();
-                                    Index index = arr.getIndex();
-                                    for (int i = -1; i <= 1; i++) {
-                                        for (int j = -1; j <= 1; j++) {
-                                            index.setDim(0, y + j);
-                                            index.setDim(1, x + i);
-                                            median.add(arr.getFloat(index));
-                                        }
-                                    }
-                                    Collections.sort(median);
-                                    return median.get(4);
-                                } else if (stddev) {
-                                    if (x == 0 || y == 0 || x == xDimension.getLength() - 1
-                                            || y == yDimension.getLength() - 1) {
-                                        return Float.NaN;
-                                    }
-
-                                    float[] values = new float[9];
-                                    Index index = arr.getIndex();
-                                    int c = 0;
-                                    float mean = 0.0f;
-                                    for (int i = -1; i <= 1; i++) {
-                                        for (int j = -1; j <= 1; j++) {
-                                            index.setDim(0, y + j);
-                                            index.setDim(1, x + i);
-                                            values[c] = arr.getFloat(index);
-                                            mean += values[c] / 9f;
-                                            c++;
-                                        }
-                                    }
-
-                                    float var = 0.0f;
-                                    for (int i = 0; i < 9; i++) {
-                                        var += (values[i] - mean) * (values[i] - mean);
-                                    }
-
-                                    return Math.sqrt(var);
-                                } else {
-                                    /*
-                                     * Create a new index
-                                     */
-                                    Index index = arr.getIndex();
-                                    /*
-                                     * Set the index values
-                                     */
-                                    index.setDim(0, y);
-                                    index.setDim(1, x);
-
-                                    return arr.getFloat(index);
-                                }
+                                return arr.getFloat(index);
                             }
 
                             @Override
@@ -591,20 +539,183 @@ public final class CloudMaskDatasetFactory extends DatasetFactory {
                     }
                 }
 
+                private Array4D<Number> read3x3Window(String variableId, int tmin, int tmax,
+                        int zmin, int zmax, final int ymin, final int ymax, final int xmin,
+                        final int xmax, final boolean median) throws IOException,
+                        DataReadingException {
+                    /*
+                     * For median / stddev, we have to read an extra pixel
+                     * either size of the requested data, but not if it hits an
+                     * edge.
+                     * 
+                     * Regardless we want the returned array to have the size
+                     * which has been requested, so we store this here.
+                     */
+                    int dataArraySizeX = xmax - xmin + 1;
+                    int dataArraySizeY = ymax - ymin + 1;
+
+                    List<Range> ranges = new ArrayList<>();
+                    Array arr;
+
+                    /*
+                     * Here we adjust the range of the underlying data to read,
+                     * expanding by one pixel at each edge if this is possible
+                     * (i.e. if we are not at the edges of the underlying data)
+                     */
+                    int yminData;
+                    if (ymin > 0) {
+                        yminData = ymin - 1;
+                    } else {
+                        yminData = ymin;
+                    }
+                    int xminData;
+                    if (xmin > 0) {
+                        xminData = xmin - 1;
+                    } else {
+                        xminData = xmin;
+                    }
+                    int ymaxData;
+                    if (ymax < yDimension.getLength() - 1) {
+                        ymaxData = ymax + 1;
+                    } else {
+                        ymaxData = ymax;
+                    }
+                    int xmaxData;
+                    if (xmax < yDimension.getLength() - 1) {
+                        xmaxData = xmax + 1;
+                    } else {
+                        xmaxData = xmax;
+                    }
+
+                    try {
+                        ranges.add(new Range(yminData, ymaxData));
+                        ranges.add(new Range(xminData, xmaxData));
+                        arr = nc.findVariable(variableId).read(ranges);
+                    } catch (InvalidRangeException e) {
+                        e.printStackTrace();
+                        throw new DataReadingException("Problem reading data", e);
+                    }
+                    return new Array4D<Number>(1, 1, dataArraySizeY, dataArraySizeX) {
+                        @Override
+                        public Number get(int... coords) {
+                            int y = coords[2];
+                            int x = coords[3];
+
+                            /*
+                             * Read data in a 3x3 window centred around the
+                             * requested pixel
+                             */
+
+                            List<Float> values = new ArrayList<>();
+
+                            if ((xmin == 0 && x == 0)
+                                    || (ymin == 0 && y == 0)
+                                    || (xmax == xDimension.getLength() - 1 && x == dataArraySizeX - 1)
+                                    || (ymax == yDimension.getLength() - 1 && y == dataArraySizeY - 1)) {
+                                /*
+                                 * If have read from the edge of the underlying
+                                 * data and are now trying to access the edge of
+                                 * the returned data, we cannot generate a
+                                 * value, so return NaN
+                                 */
+                                return Float.NaN;
+                            }
+
+                            Index index = arr.getIndex();
+                            /*-
+                             * The data read and stored in arr is indexed from
+                             * 0.
+                             * 
+                             * IF AND ONLY IF this contains the LOWER edge of
+                             * the data (i.e. xmin / ymin was zero), then the
+                             * coordinates being requested have matching indices.
+                             * 
+                             * For example in a 1D case:
+                             * 
+                             * arr indices            [0,1,2,3,4...
+                             * map to return indices  [0,1,2,3,4...
+                             * 
+                             * and (return indices) 0 will be NaN
+                             *                      1 will be calculated from arr indices 0,1,2
+                             *                      2 will be calculated from arr indices 1,2,3
+                             * 
+                             * OTHERWISE we will have an offset, because we will have read data
+                             * from an index one lower.  Again, an example:
+                             * 
+                             * arr indices            [0,1,2,3,4...
+                             * map to return indices    [0,1,2,3...
+                             * 
+                             * and (return indices) 0 will be calculated from arr indices 0,1,2
+                             *                      1 will be calculated from arr indices 1,2,3
+                             *                      2 will be calculated from arr indices 2,3,4
+                             * 
+                             * Yes, it's a little complicated, but worth understanding if you
+                             * plan on editing this.  Which hopefully you won't have to,
+                             * because I've spent a brainachy time getting it right...
+                             */
+                            for (int i = 0; i <= 2; i++) {
+                                for (int j = 0; j <= 2; j++) {
+                                    if(xmin == 0) {
+                                        index.setDim(1, x + i - 1);
+                                    } else {
+                                        index.setDim(1, x + i);
+                                    }
+                                    if(ymin == 0) {
+                                        index.setDim(0, y + j - 1);
+                                    } else {
+                                        index.setDim(0, y + j);
+                                    }
+                                    values.add(arr.getFloat(index));
+                                }
+                            }
+
+                            if (median) {
+                                /*
+                                 * Sort numerically and pick the middle value
+                                 */
+                                Collections.sort(values);
+                                return values.get(4);
+                            } else {
+                                /*
+                                 * We have a standard deviation
+                                 */
+                                float mean = 0.0f;
+                                for (Float value : values) {
+                                    mean += value / 9f;
+                                }
+
+                                float var = 0.0f;
+                                for (Float value : values) {
+                                    var += (value - mean) * (value - mean);
+                                }
+
+                                return Math.sqrt(var);
+                            }
+                        }
+
+                        @Override
+                        public void set(Number value, int... coords) {
+                            throw new UnsupportedOperationException("Immutable array");
+                        }
+                    };
+                }
+
                 @Override
                 public Array4D<Number> read(String variableId, int tmin, int tmax, int zmin,
                         int zmax, int ymin, int ymax, int xmin, int xmax) throws IOException,
                         DataReadingException {
                     if (variableId.endsWith(MEDIAN) && unmaskedVariables.contains(variableId)) {
-                        return read(variableId.substring(0, variableId.length() - MEDIAN.length()),
-                                tmin, tmax, zmin, zmax, ymin, ymax, xmin, xmax, true, false);
+                        return read3x3Window(
+                                variableId.substring(0, variableId.length() - MEDIAN.length()),
+                                tmin, tmax, zmin, zmax, ymin, ymax, xmin, xmax, true);
                     } else if (variableId.endsWith(STDDEV)
                             && unmaskedVariables.contains(variableId)) {
-                        return read(variableId.substring(0, variableId.length() - STDDEV.length()),
-                                tmin, tmax, zmin, zmax, ymin, ymax, xmin, xmax, false, true);
+                        return read3x3Window(
+                                variableId.substring(0, variableId.length() - STDDEV.length()),
+                                tmin, tmax, zmin, zmax, ymin, ymax, xmin, xmax, false);
                     } else {
-                        return read(variableId, tmin, tmax, zmin, zmax, ymin, ymax, xmin, xmax,
-                                false, false);
+                        return readNormal(variableId, tmin, tmax, zmin, zmax, ymin, ymax, xmin,
+                                xmax);
                     }
                 }
 
@@ -670,7 +781,7 @@ public final class CloudMaskDatasetFactory extends DatasetFactory {
             if (newValue == null && oldValue != null) {
                 manualMask.set(newValue, y, x);
                 return true;
-            } else if ((MANUAL_CLEAR == newValue && oldValue.intValue() != 0)
+            } else if (oldValue == null || (MANUAL_CLEAR == newValue && oldValue.intValue() != 0)
                     || (MANUAL_CLOUDY == newValue && oldValue.intValue() != 1)
                     || (MANUAL_PROBABLY_CLEAR == newValue) || (MANUAL_PROBABLY_CLOUDY == newValue)) {
                 /*
