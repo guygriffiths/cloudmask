@@ -129,7 +129,6 @@ public class MaskedVariableView extends HBox {
         maskRangeSlider = new MaskRangeSlider();
         maskRangeSlider.setShowTickMarks(true);
         maskRangeSlider.setShowTickLabels(true);
-        maskRangeSlider.getStyleClass().add("mask-slider");
 
         minMaskVal = new TextField();
         maxMaskVal = new TextField();
@@ -638,12 +637,6 @@ public class MaskedVariableView extends HBox {
         imageView.updateJustThisImage();
         colourbarSlider.updateValue();
     }
-
-//    public void setIncludedInMask(boolean included) {
-//        disabledCallbacks = true;
-//        includedInMask.setSelected(included);
-//        disabledCallbacks = false;
-//    }
 
     private static void setTickUnit(RangeSlider slider) {
         double unit = (slider.getMax() - slider.getMin()) / 10.0;

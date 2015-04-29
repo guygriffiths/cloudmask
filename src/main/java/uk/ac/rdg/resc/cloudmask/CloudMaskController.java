@@ -35,6 +35,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Stack;
 import java.util.function.Predicate;
 
@@ -48,6 +49,9 @@ import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import javafx.collections.transformation.FilteredList;
+import javafx.scene.control.Alert;
+import javafx.scene.control.Alert.AlertType;
+import javafx.scene.control.ButtonType;
 import javafx.stage.Stage;
 
 import org.controlsfx.dialog.ExceptionDialog;
@@ -90,6 +94,14 @@ public class CloudMaskController {
     private SettingsPane settingsPane;
 
     private Stage mainStage;
+
+    /*
+     * This doesn't necessarily represent a change in the data which would be
+     * saved, but rather the possibility that this has occurred. False positives
+     * are not a problem, and it's usually more efficient to just set the value
+     * then check in detail.
+     */
+    private boolean changedSinceLastSave = false;
 
     public CloudMaskController(int compositeWidth, int compositeHeight, double scale,
             Stage primaryStage) {
@@ -226,6 +238,7 @@ public class CloudMaskController {
     public void saveCurrentDataset(File selectedFile) {
         try {
             CloudMaskDatasetFactory.writeDataset(activeDataset, selectedFile.getAbsolutePath());
+            changedSinceLastSave = false;
         } catch (VariableNotFoundException | DataReadingException | IOException
                 | InvalidRangeException e) {
             ExceptionDialog exceptionDialog = new ExceptionDialog(e);
@@ -366,6 +379,7 @@ public class CloudMaskController {
         MaskedVariableView view = views.get(var);
         view.redrawImage();
         compositeMaskView.imageView.updateJustThisImage();
+        changedSinceLastSave = true;
     }
 
     public void setMaskThresholdInclusive(String var, boolean inclusive) {
@@ -373,6 +387,7 @@ public class CloudMaskController {
         MaskedVariableView view = views.get(var);
         view.redrawImage();
         compositeMaskView.imageView.updateJustThisImage();
+        changedSinceLastSave = true;
     }
 
     public BooleanProperty variableInMaskProperty(String currentVariable) {
@@ -388,12 +403,14 @@ public class CloudMaskController {
         UndoState undoState = new UndoState(dataModels.get(var).scaleRange,
                 activeDataset.getMaskThreshold(var));
         undoStacks.get(var).setCurrentState(undoState);
+        changedSinceLastSave = true;
     }
 
     public void undoLastAction(String var) {
         UndoState undo = undoStacks.get(var).undo();
         if (undo != null) {
             views.get(var).changeSliderValues(undo.colourScaleRange, undo.maskScaleRange, false);
+            changedSinceLastSave = true;
         }
     }
 
@@ -401,6 +418,7 @@ public class CloudMaskController {
         UndoState redo = undoStacks.get(var).redo();
         if (redo != null) {
             views.get(var).changeSliderValues(redo.colourScaleRange, redo.maskScaleRange, false);
+            changedSinceLastSave = true;
         }
     }
 
@@ -415,6 +433,7 @@ public class CloudMaskController {
             catalogue.expireFromCache(CompositeMaskPlugin.COMPOSITEMASK);
             catalogue.expireFromCache(MaskedDataset.MANUAL_MASK_NAME);
             compositeMaskView.imageView.updateJustThisImage();
+            changedSinceLastSave = true;
         }
     }
 
@@ -429,11 +448,13 @@ public class CloudMaskController {
             catalogue.expireFromCache(CompositeMaskPlugin.COMPOSITEMASK);
             catalogue.expireFromCache(MaskedDataset.MANUAL_MASK_NAME);
             compositeMaskView.imageView.updateJustThisImage();
+            changedSinceLastSave = true;
         }
     }
 
     public void setManualMask(GridCoordinates2D imageCoords, int radius, Integer value) {
         setManualMask(imageCoords, value, radius, true);
+        changedSinceLastSave = true;
     }
 
     private void setManualMask(GridCoordinates2D imageCoords, Integer value, int radius,
@@ -472,7 +493,17 @@ public class CloudMaskController {
     }
 
     public void quit() {
-        mainStage.close();
+        if (!changedSinceLastSave) {
+            mainStage.close();
+        } else {
+            Alert saveWarning = new Alert(AlertType.CONFIRMATION,
+                    "You have modified settings since last save.  Really quit?", ButtonType.OK,
+                    ButtonType.CANCEL);
+            Optional<ButtonType> showAndWait = saveWarning.showAndWait();
+            if(showAndWait.isPresent() && showAndWait.get() == ButtonType.OK) {
+                mainStage.close();
+            }
+        }
     }
 
     class MaskVariable implements Comparable<MaskVariable> {

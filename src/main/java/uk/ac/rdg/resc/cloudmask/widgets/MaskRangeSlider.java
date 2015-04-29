@@ -28,6 +28,8 @@
 
 package uk.ac.rdg.resc.cloudmask.widgets;
 
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
 import javafx.scene.layout.Background;
 import javafx.scene.layout.BackgroundFill;
 import javafx.scene.layout.CornerRadii;
@@ -47,8 +49,39 @@ public class MaskRangeSlider extends RangeSlider {
     private static final Paint DARK_GRADIENT = new LinearGradient(0, 0, 0, 1, true,
             CycleMethod.NO_CYCLE, new Stop(0, Color.DARKGRAY), new Stop(0.66, Color.BLACK),
             new Stop(1.0, Color.DARKGRAY));
+    private boolean inclusive = false;
+
+    public MaskRangeSlider() {
+        super();
+        getStyleClass().add("mask-slider");
+        /*
+         * This used to not be necessary, but a Java update changed things.
+         * 
+         * Previously the setBackgrounds() method only needed to be called
+         * within setInclusive()
+         */
+        lowValueProperty().addListener(new ChangeListener<Number>() {
+            @Override
+            public void changed(ObservableValue<? extends Number> observable, Number oldValue,
+                    Number newValue) {
+                setBackgrounds();
+            }
+        });
+        highValueProperty().addListener(new ChangeListener<Number>() {
+            @Override
+            public void changed(ObservableValue<? extends Number> observable, Number oldValue,
+                    Number newValue) {
+                setBackgrounds();
+            }
+        });
+    }
 
     public void setInclusive(boolean inclusive) {
+        this.inclusive = inclusive;
+        setBackgrounds();
+    }
+
+    private void setBackgrounds() {
         BackgroundFill inFill;
         BackgroundFill outFill;
 

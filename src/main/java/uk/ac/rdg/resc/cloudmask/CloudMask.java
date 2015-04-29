@@ -133,6 +133,7 @@ public class CloudMask extends Application {
         grid.setMaxSize(Region.USE_COMPUTED_SIZE, Region.USE_COMPUTED_SIZE);
         
         Scene scene = new Scene(grid, WINDOW_WIDTH, WINDOW_HEIGHT);
+        scene.getStylesheets().add("/org/controlsfx/control/rangeslider.css");
         scene.getStylesheets().add(getClass().getResource("/cloudmask.css").toExternalForm());
         primaryStage.setScene(scene);
         primaryStage.show();

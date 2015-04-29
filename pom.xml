@@ -185,8 +185,10 @@
         <developerConnection>scm:git:ssh://github.com/guygriffiths/cloudmask</developerConnection>
         <url>https://github.com/guygriffiths/cloudmask</url>
     </scm>
-    <repositories>
-        <!-- <repository> <id>edal-snapshots</id> <url>https://oss.sonatype.org/content/repositories/snapshots</url> 
-            </repository> -->
-    </repositories>
+<!--     <repositories> -->
+<!--         <repository> -->
+<!--             <id>edal-snapshots</id> -->
+<!--             <url>https://oss.sonatype.org/content/repositories/snapshots</url> -->
+<!--         </repository> -->
+<!--     </repositories> -->
 </project>

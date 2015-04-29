@@ -1,39 +1,43 @@
-.slider .thumb {
+/* This sets the size of the adjustable part of the slider */
+.slider .thumb,
+.range-slider .low-thumb,
+.range-slider .high-thumb {
 	-fx-background-radius: 0.2em;
-	-fx-padding: 1.2em; /* This sets the size */
+	-fx-padding: 1.2em;
 }
 
+/* Padding on left to avoid overlap with image */
+/* Negative padding on right - labels have excess space */
 .colourbar-slider {
-    -fx-padding: 8 0 8 0;
+    -fx-padding: 8 -60 8 2.0em;
 }
 
+/* Sets the slider tick marks to black */
 .range-slider .axis .axis-tick-mark, .colourbar-slider .axis .axis-minor-tick-mark {
 	-fx-stroke: black;
 }
 
+/* Sets the slider text to black */
 .range-slider .axis {
 	-fx-tick-label-fill: black;
 }
 
-.range-slider .low-thumb,
-.range-slider .high-thumb {
-	-fx-background-radius: 0.2em;
-	-fx-padding: 1.2em; /* This sets the size */
-}
-
+/* Determines the width of the colourbar */
 .colourbar-slider .track {
 	-fx-padding: 0.8em;
+}
+
+/* Determines the width of the threshold mask slider */
+.mask-slider .track {
+	-fx-padding: 0.6em;
+}
+
+/* Padding to ensure that labels on both ends of the scale don't go off screen */
+.mask-slider {
+	-fx-padding: 2 16 0 16;
 }
 
 .colourbar-slider .range-bar {
 	-fx-padding: 1em;
 	-fx-opacity: 0;
-}
-
-.mask-slider {
-	-fx-padding: 2 16 0 16;
-}
-
-.mask-slider .track {
-	-fx-padding: 0.6em;
 }
