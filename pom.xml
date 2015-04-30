@@ -29,7 +29,7 @@
     </organization>
     <licenses>
         <license>
-            <url>https://github.com/guygriffiths/cloudmask/blob/master/license.txt</url>
+            <url>https://raw.githubusercontent.com/guygriffiths/cloudmask/master/licence.txt</url>
             <name>Modified BSD license</name>
             <comments>Permits redistribution and use in source and binary form
             provided that the copyright notice is retained (see licence for
