@@ -37,6 +37,7 @@ import javafx.beans.value.ObservableValue;
 import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
+import javafx.geometry.Orientation;
 import javafx.geometry.Rectangle2D;
 import javafx.scene.control.Button;
 import javafx.scene.control.CheckBox;
@@ -60,18 +61,23 @@ import javafx.scene.text.Font;
 import javafx.util.Callback;
 import uk.ac.rdg.resc.cloudmask.CloudMaskController.MaskVariable;
 import uk.ac.rdg.resc.cloudmask.CloudMaskDatasetFactory.MaskedDataset;
+import uk.ac.rdg.resc.cloudmask.widgets.ColourbarSlider;
 import uk.ac.rdg.resc.cloudmask.widgets.LinkedZoomableImageView;
 import uk.ac.rdg.resc.cloudmask.widgets.PaletteSelector;
 import uk.ac.rdg.resc.cloudmask.widgets.ZoomableImageView.ImageGenerator;
+import uk.ac.rdg.resc.edal.domain.Extent;
 import uk.ac.rdg.resc.edal.exceptions.EdalException;
 import uk.ac.rdg.resc.edal.graphics.style.util.SimpleFeatureCatalogue;
 import uk.ac.rdg.resc.edal.grid.HorizontalGrid;
 import uk.ac.rdg.resc.edal.position.HorizontalPosition;
+import uk.ac.rdg.resc.edal.util.Extents;
 import uk.ac.rdg.resc.edal.util.GridCoordinates2D;
 
 public class CompositeMaskView extends HBox {
     LinkedZoomableImageView imageView = null;
     CompositeMaskEdalImageGenerator imageGenerator = null;
+    private ColourbarSlider colourbarSlider;
+    private boolean disableCallbacks = false;
     private TableView<MaskVariable> variables;
     private Button selectPalette;
 
@@ -109,8 +115,28 @@ public class CompositeMaskView extends HBox {
                         }
                         try {
                             imageGenerator.setVariable(newVal.variableName.getValue());
+                            Extent<Float> scaleRange = imageGenerator.getScaleRange();
+                            if (imageGenerator.isRgb()) {
+                                colourbarSlider.setDisable(true);
+                                getChildren().remove(colourbarSlider);
+                            } else {
+                                colourbarSlider.setDisable(false);
+                                if (!getChildren().contains(colourbarSlider)) {
+                                    getChildren().add(1, colourbarSlider);
+                                }
+                                /*
+                                 * Set the range on the colourbar slider.
+                                 */
+                                disableCallbacks = true;
+                                colourbarSlider.setMin(scaleRange.getLow());
+                                colourbarSlider.setMax(scaleRange.getHigh());
+                                colourbarSlider.setLowValue(scaleRange.getLow());
+                                colourbarSlider.setHighValue(scaleRange.getHigh());
+                                colourbarSlider.setLowValue(scaleRange.getLow());
+                                disableCallbacks = false;
+                            }
+                            imageView.updateJustThisImage();
                             varLabel.textProperty().set(newVal.variableName.getValue());
-                            imageView.updateImage();
                         } catch (EdalException e) {
                             e.printStackTrace();
                         }
@@ -157,6 +183,31 @@ public class CompositeMaskView extends HBox {
         variables.getColumns().add(valCol);
 
         variables.setItems(controller.getPlottableVariables());
+
+        colourbarSlider = new ColourbarSlider();
+        colourbarSlider.setOrientation(Orientation.VERTICAL);
+        colourbarSlider.lowValueProperty().addListener(new ChangeListener<Number>() {
+            @Override
+            public void changed(ObservableValue<? extends Number> observer, Number oldVal,
+                    Number newVal) {
+                if (!disableCallbacks && newVal.floatValue() < colourbarSlider.getHighValue()) {
+                    imageGenerator.setScaleRange(Extents.newExtent(newVal.floatValue(),
+                            (float) colourbarSlider.getHighValue()));
+                    imageView.updateJustThisImage();
+                }
+            }
+        });
+        colourbarSlider.highValueProperty().addListener(new ChangeListener<Number>() {
+            @Override
+            public void changed(ObservableValue<? extends Number> observer, Number oldVal,
+                    Number newVal) {
+                if (!disableCallbacks && newVal.floatValue() > colourbarSlider.getLowValue()) {
+                    imageGenerator.setScaleRange(Extents.newExtent(
+                            (float) colourbarSlider.getLowValue(), newVal.floatValue()));
+                    imageView.updateJustThisImage();
+                }
+            }
+        });
 
         pixelType = new TitledPane();
         pixelType.setText("Manual masking");
@@ -220,7 +271,7 @@ public class CompositeMaskView extends HBox {
             }
         });
         types.getChildren().add(showSetPixels);
-        
+
         manualSetRadius = new Slider(1.0, 50.0, 1.0);
         manualSetRadius.setShowTickLabels(true);
         manualSetRadius.setShowTickMarks(true);
@@ -272,11 +323,17 @@ public class CompositeMaskView extends HBox {
         VBox.setVgrow(variables, Priority.ALWAYS);
 
         try {
+            /*
+             * This sets the catalogue to null which also adds the ImageView to
+             * this panel
+             */
             setCatalogue(null);
         } catch (EdalException | IOException e) {
             e.printStackTrace();
         }
+        getChildren().add(colourbarSlider);
         getChildren().add(widgets);
+        HBox.setHgrow(colourbarSlider, Priority.NEVER);
         HBox.setHgrow(widgets, Priority.ALWAYS);
     }
 
@@ -305,6 +362,21 @@ public class CompositeMaskView extends HBox {
                     .getVariableMetadata(MaskedDataset.MANUAL_MASK_NAME).getHorizontalDomain();
 
             imageGenerator = new CompositeMaskEdalImageGenerator(variableNames.get(0), catalogue);
+            colourbarSlider.setImageGenerator(imageGenerator);
+            Extent<Float> scaleRange = imageGenerator.getScaleRange();
+            colourbarSlider.setMax(scaleRange.getHigh());
+            colourbarSlider.setMin(scaleRange.getLow());
+            /*
+             * Set low, then high, then low.
+             * 
+             * The first setLow may fail if it's higher than the current high
+             * value. We could do a test to see which order to apply the
+             * high/low setting in, but this works equally well
+             */
+            colourbarSlider.setLowValue(scaleRange.getLow());
+            colourbarSlider.setHighValue(scaleRange.getHigh());
+            colourbarSlider.setLowValue(scaleRange.getLow());
+
             varLabel.textProperty().set(variableNames.get(0));
             imageView = new LinkedZoomableImageView(imageWidth, imageHeight, imageGenerator);
             imageView.addEventHandler(MouseEvent.MOUSE_CLICKED, new EventHandler<MouseEvent>() {

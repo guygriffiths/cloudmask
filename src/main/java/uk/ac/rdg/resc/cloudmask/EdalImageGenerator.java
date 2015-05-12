@@ -55,15 +55,15 @@ public class EdalImageGenerator implements ImageGenerator {
      */
     private Color maskColor = new Color(0, 0, 0, 0.75f);
 
-    protected final String varName;
+    protected String varName;
     protected final SimpleFeatureCatalogue<MaskedDataset> catalogue;
 
     private final int xSize;
     private final int ySize;
 
     protected MapImage image;
-    private RasterLayer rasterLayer;
-    private RasterLayer thresholdLayer;
+    protected RasterLayer rasterLayer;
+    protected RasterLayer thresholdLayer;
 
     private ColourScheme colourScheme;
     protected Extent<Float> scaleRange;
@@ -87,7 +87,7 @@ public class EdalImageGenerator implements ImageGenerator {
         this.scaleRange = scaleRange;
         this.palette = "seq-cubeYF";
 
-        if ("rgbint".equals(variableMetadata.getParameter().getUnits())) {
+        if (RgbFalseColourPlugin.RGB_UNITS.equals(variableMetadata.getParameter().getUnits())) {
             colourScheme = new RGBColourScheme();
             rgb = true;
         } else {

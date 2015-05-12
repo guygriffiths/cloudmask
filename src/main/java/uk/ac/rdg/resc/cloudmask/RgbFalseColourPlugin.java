@@ -40,6 +40,7 @@ import uk.ac.rdg.resc.edal.position.HorizontalPosition;
 
 public class RgbFalseColourPlugin extends VariablePlugin {
     public static final String RGB = "rgb";
+    public static final String RGB_UNITS = "rgbint";
     private Extent<Float> rScaleRange;
     private Extent<Float> gScaleRange;
     private Extent<Float> bScaleRange;
@@ -61,7 +62,7 @@ public class RgbFalseColourPlugin extends VariablePlugin {
 
         VariableMetadata rgbMeta = newVariableMetadataFromMetadata(new Parameter(getFullId(RGB),
                 "RGB False Colour Image", "False colour image using variables R: " + rMeta.getId()
-                        + ", G: " + gMeta.getId() + ", B: " + bMeta.getId(), "rgbint", null), true,
+                        + ", G: " + gMeta.getId() + ", B: " + bMeta.getId(), RGB_UNITS, null), true,
                 rMeta, gMeta, bMeta);
         rgbMeta.setParent(rMeta.getParent(), null);
         return new VariableMetadata[] { rgbMeta };

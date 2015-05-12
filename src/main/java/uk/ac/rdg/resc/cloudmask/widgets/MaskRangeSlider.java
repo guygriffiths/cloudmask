@@ -74,6 +74,20 @@ public class MaskRangeSlider extends RangeSlider {
                 setBackgrounds();
             }
         });
+        minProperty().addListener(new ChangeListener<Number>() {
+            @Override
+            public void changed(ObservableValue<? extends Number> observer, Number oldVal,
+                    Number newVal) {
+                setTickUnit();
+            }
+        });
+        maxProperty().addListener(new ChangeListener<Number>() {
+            @Override
+            public void changed(ObservableValue<? extends Number> observer, Number oldVal,
+                    Number newVal) {
+                setTickUnit();
+            }
+        });
     }
 
     public void setInclusive(boolean inclusive) {
@@ -95,5 +109,19 @@ public class MaskRangeSlider extends RangeSlider {
 
         ((StackPane) getChildren().get(1)).setBackground(new Background(outFill));
         ((StackPane) getChildren().get(4)).setBackground(new Background(inFill));
+    }
+    
+    private void setTickUnit() {
+        double unit = (getMax() - getMin()) / 10.0;
+        for (int i = -10;; i++) {
+            if (Math.pow(10, i) / 2 > unit) {
+                unit = Math.pow(10, i) / 2;
+                break;
+            } else if (Math.pow(10, i) > unit) {
+                unit = Math.pow(10, i);
+                break;
+            }
+        }
+        setMajorTickUnit(unit);
     }
 }

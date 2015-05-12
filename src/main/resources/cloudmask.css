@@ -7,9 +7,8 @@
 }
 
 /* Padding on left to avoid overlap with image */
-/* Negative padding on right - labels have excess space */
 .colourbar-slider {
-    -fx-padding: 8 -60 8 2.0em;
+    -fx-padding: 8 0 8 0;
 }
 
 /* Sets the slider tick marks to black */

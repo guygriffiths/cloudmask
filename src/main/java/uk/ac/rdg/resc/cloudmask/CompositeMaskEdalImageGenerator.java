@@ -33,7 +33,6 @@ import java.awt.image.BufferedImage;
 import java.io.IOException;
 
 import uk.ac.rdg.resc.cloudmask.CloudMaskDatasetFactory.MaskedDataset;
-import uk.ac.rdg.resc.cloudmask.widgets.ZoomableImageView.ImageGenerator;
 import uk.ac.rdg.resc.edal.domain.Extent;
 import uk.ac.rdg.resc.edal.exceptions.EdalException;
 import uk.ac.rdg.resc.edal.geometry.BoundingBoxImpl;
@@ -47,7 +46,7 @@ import uk.ac.rdg.resc.edal.graphics.style.util.SimpleFeatureCatalogue;
 import uk.ac.rdg.resc.edal.metadata.GridVariableMetadata;
 import uk.ac.rdg.resc.edal.util.PlottingDomainParams;
 
-public class CompositeMaskEdalImageGenerator implements ImageGenerator {
+public class CompositeMaskEdalImageGenerator extends EdalImageGenerator {//implements ImageGenerator {
     private Color maskColor = new Color(0, 0, 0, 0.75f);
 
     private final int xSize;
@@ -55,13 +54,11 @@ public class CompositeMaskEdalImageGenerator implements ImageGenerator {
     protected MapImage image;
     protected SimpleFeatureCatalogue<MaskedDataset> catalogue;
     protected Extent<Float> scaleRange;
-    private RasterLayer rasterLayer;
-    private RasterLayer thresholdLayer;
-    private String varName;
     private String palette;
 
     private RasterLayer manualLayer;
     private boolean manualShowing = false;
+    private boolean isRgb = false;
 
 
     public CompositeMaskEdalImageGenerator(String var,
@@ -72,6 +69,7 @@ public class CompositeMaskEdalImageGenerator implements ImageGenerator {
     public CompositeMaskEdalImageGenerator(String var,
             SimpleFeatureCatalogue<MaskedDataset> catalogue, Extent<Float> scaleRange)
             throws IOException, EdalException {
+        super(var, catalogue);
         GridVariableMetadata variableMetadata = (GridVariableMetadata) catalogue.getDataset()
                 .getVariableMetadata(var);
         xSize = variableMetadata.getHorizontalDomain().getXSize();
@@ -88,7 +86,6 @@ public class CompositeMaskEdalImageGenerator implements ImageGenerator {
                 new SegmentColourScheme(new ColourScale(0f, 1f, false), null, null, null,
                         "#00000000," + GraphicsUtils.colourToString(maskColor), 4));
         image.getLayers().add(thresholdLayer);
-        this.varName = var;
 
         manualLayer = new RasterLayer(MaskedDataset.MANUAL_MASK_NAME, new SegmentColourScheme(
                 new ColourScale(100f, 101f, false), null, null, null, "#aaff0000", 1));
@@ -107,27 +104,36 @@ public class CompositeMaskEdalImageGenerator implements ImageGenerator {
                     "Cannot set this variable - must have the same grid size as existing variable");
         }
         this.scaleRange = scaleRange;
+        this.varName = var;
         image.getLayers().remove(rasterLayer);
-        if ("rgbint".equals(variableMetadata.getParameter().getUnits())) {
+        if (RgbFalseColourPlugin.RGB_UNITS.equals(variableMetadata.getParameter().getUnits())) {
             rasterLayer = new RasterLayer(var, new RGBColourScheme());
+            isRgb = true;
         } else {
             rasterLayer = new RasterLayer(var, new SegmentColourScheme(new ColourScale(scaleRange,
                     false), null, null, null, palette, 250));
+            isRgb = false;
         }
         image.getLayers().add(0, rasterLayer);
     }
+    
+    public boolean isRgb() {
+        return isRgb;
+    }
 
+    @Override
     public void setPalette(String palette) {
         this.palette = palette;
-        image.getLayers().remove(rasterLayer);
+        image.getLayers().remove(0);
         rasterLayer = new RasterLayer(varName, new SegmentColourScheme(new ColourScale(scaleRange,
                 false), null, null, null, palette, 250));
         image.getLayers().add(0, rasterLayer);
     }
 
+    @Override
     public void setScaleRange(Extent<Float> scaleRange) {
         this.scaleRange = scaleRange;
-        image.getLayers().remove(rasterLayer);
+        image.getLayers().remove(0);
         rasterLayer = new RasterLayer(varName, new SegmentColourScheme(new ColourScale(scaleRange,
                 false), null, null, null, palette, 250));
         image.getLayers().add(0, rasterLayer);
@@ -164,6 +170,7 @@ public class CompositeMaskEdalImageGenerator implements ImageGenerator {
         }
     }
 
+    @Override
     public BufferedImage getLegend(int size, float fracOutOfRangeLow, float fracOutOfRangeHigh,
             boolean vertical) {
         return rasterLayer.getColourScheme().getScaleBar(1, size, fracOutOfRangeLow,
@@ -188,15 +195,5 @@ public class CompositeMaskEdalImageGenerator implements ImageGenerator {
     @Override
     public double getMaxValidY() {
         return ySize - 0.5;
-    }
-
-    public void setMaskOpacity(float value) {
-        if (value < 0)
-            value = 0f;
-        if (value > 1)
-            value = 1f;
-        maskColor = new Color(0f, 0f, 0f, value);
-        thresholdLayer.setColourScheme(new SegmentColourScheme(new ColourScale(0f, 1f, false),
-                null, null, null, "#00000000," + GraphicsUtils.colourToString(maskColor), 4));
     }
 }

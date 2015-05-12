@@ -54,9 +54,6 @@ import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 import javafx.scene.text.Font;
 import javafx.util.Callback;
-
-import org.controlsfx.control.RangeSlider;
-
 import uk.ac.rdg.resc.cloudmask.CloudMaskController.MaskVariable;
 import uk.ac.rdg.resc.cloudmask.widgets.ColourbarSlider;
 import uk.ac.rdg.resc.cloudmask.widgets.LinkedZoomableImageView;
@@ -135,9 +132,7 @@ public class MaskedVariableView extends HBox {
 
         colourbarSlider = new ColourbarSlider();
         colourbarSlider.setOrientation(Orientation.VERTICAL);
-        colourbarSlider.setShowTickMarks(true);
-        colourbarSlider.setShowTickLabels(true);
-
+        
         inclusiveThreshold = new CheckBox("Mask inside threshold");
         includedInMask = new CheckBox("Included in composite");
 
@@ -347,21 +342,6 @@ public class MaskedVariableView extends HBox {
                 }
             }
         });
-        maskRangeSlider.minProperty().addListener(new ChangeListener<Number>() {
-            @Override
-            public void changed(ObservableValue<? extends Number> observer, Number oldVal,
-                    Number newVal) {
-                setTickUnit(maskRangeSlider);
-            }
-        });
-        maskRangeSlider.maxProperty().addListener(new ChangeListener<Number>() {
-            @Override
-            public void changed(ObservableValue<? extends Number> observer, Number oldVal,
-                    Number newVal) {
-                setTickUnit(maskRangeSlider);
-            }
-        });
-
         colourbarSlider.lowValueProperty().addListener(new ChangeListener<Number>() {
             @Override
             public void changed(ObservableValue<? extends Number> observer, Number oldVal,
@@ -404,20 +384,6 @@ public class MaskedVariableView extends HBox {
                      */
                     controller.addUndoState(currentVariable);
                 }
-            }
-        });
-        colourbarSlider.minProperty().addListener(new ChangeListener<Number>() {
-            @Override
-            public void changed(ObservableValue<? extends Number> observer, Number oldVal,
-                    Number newVal) {
-                setTickUnit(colourbarSlider);
-            }
-        });
-        colourbarSlider.maxProperty().addListener(new ChangeListener<Number>() {
-            @Override
-            public void changed(ObservableValue<? extends Number> observer, Number oldVal,
-                    Number newVal) {
-                setTickUnit(colourbarSlider);
             }
         });
 
@@ -636,19 +602,5 @@ public class MaskedVariableView extends HBox {
          */
         imageView.updateJustThisImage();
         colourbarSlider.updateValue();
-    }
-
-    private static void setTickUnit(RangeSlider slider) {
-        double unit = (slider.getMax() - slider.getMin()) / 10.0;
-        for (int i = -10;; i++) {
-            if (Math.pow(10, i) / 2 > unit) {
-                unit = Math.pow(10, i) / 2;
-                break;
-            } else if (Math.pow(10, i) > unit) {
-                unit = Math.pow(10, i);
-                break;
-            }
-        }
-        slider.setMajorTickUnit(unit);
     }
 }

@@ -51,6 +51,7 @@ public class ColourbarSlider extends RangeSlider {
 
     public ColourbarSlider() {
         super();
+
         getStyleClass().add("colourbar-slider");
         lowValueProperty().addListener(new ChangeListener<Number>() {
             @Override
@@ -80,6 +81,21 @@ public class ColourbarSlider extends RangeSlider {
                 updateValue();
             }
         });
+        minProperty().addListener(new ChangeListener<Number>() {
+            @Override
+            public void changed(ObservableValue<? extends Number> observer, Number oldVal,
+                    Number newVal) {
+                setTickUnit();
+            }
+        });
+        maxProperty().addListener(new ChangeListener<Number>() {
+            @Override
+            public void changed(ObservableValue<? extends Number> observer, Number oldVal,
+                    Number newVal) {
+                setTickUnit();
+            }
+        });
+
 
         setHighValue(getMax());
         setLowValue(getMin());
@@ -93,6 +109,9 @@ public class ColourbarSlider extends RangeSlider {
         });
 
         updateValue();
+
+        setShowTickMarks(true);
+        setShowTickLabels(false);
     }
 
     public void setImageGenerator(EdalImageGenerator imageGenerator) {
@@ -123,5 +142,19 @@ public class ColourbarSlider extends RangeSlider {
                 }
             }
         }
+    }
+
+    private void setTickUnit() {
+        double unit = (getMax() - getMin()) / 10.0;
+        for (int i = -10;; i++) {
+            if (Math.pow(10, i) / 2 > unit) {
+                unit = Math.pow(10, i) / 2;
+                break;
+            } else if (Math.pow(10, i) > unit) {
+                unit = Math.pow(10, i);
+                break;
+            }
+        }
+        setMajorTickUnit(unit);
     }
 }
