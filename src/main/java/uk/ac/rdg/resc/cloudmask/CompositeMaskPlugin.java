@@ -37,6 +37,7 @@ import uk.ac.rdg.resc.edal.position.HorizontalPosition;
 public class CompositeMaskPlugin extends VariablePlugin {
 
     public static final String COMPOSITEMASK = "composite-mask";
+    public static final String COMPOSITEMASK_UNITS = "0: clear; 0.33: probably clear; 0.66: probably cloudy; 1: cloudy";
     private VariableMetadata compositeMeta;
     private String manualMaskName;
 
@@ -49,9 +50,7 @@ public class CompositeMaskPlugin extends VariablePlugin {
     protected VariableMetadata[] doProcessVariableMetadata(VariableMetadata... metadata)
             throws EdalException {
         compositeMeta = newVariableMetadataFromMetadata(new Parameter(getFullId("mask"),
-                "Composite mask", "Composite mask",
-                "0: clear; 0.33: probably clear; 0.66: probably cloudy; 1: cloudy", null), true,
-                metadata);
+                "Composite mask", "Composite mask", COMPOSITEMASK_UNITS, null), true, metadata);
         return new VariableMetadata[] { compositeMeta };
     }
 
@@ -69,6 +68,10 @@ public class CompositeMaskPlugin extends VariablePlugin {
          * 2 - Probably cloud
          * 
          * 3 - Cloud
+         * 
+         * 4 - Dust
+         * 
+         * 5 - Smoke
          */
         if (sourceValues[0] != null) {
             return sourceValues[0].floatValue() / 3.0f;

@@ -211,7 +211,6 @@ public class CompositeMaskView extends HBox {
 
         pixelType = new TitledPane();
         pixelType.setText("Manual masking");
-        pixelType.setCollapsible(false);
         VBox types = new VBox(MaskedVariableView.WIDGET_SPACING);
         ToggleGroup group = new ToggleGroup();
         RadioButton unset = new RadioButton("Unset");
@@ -260,6 +259,24 @@ public class CompositeMaskView extends HBox {
         });
         cloudy.setSelected(true);
         types.getChildren().add(cloudy);
+        RadioButton dusty = new RadioButton("Dust");
+        dusty.setToggleGroup(group);
+        dusty.setOnAction(new EventHandler<ActionEvent>() {
+            @Override
+            public void handle(ActionEvent event) {
+                manualMaskValue = MaskedDataset.MANUAL_DUST;
+            }
+        });
+        types.getChildren().add(dusty);
+        RadioButton smoke = new RadioButton("Smoke");
+        smoke.setToggleGroup(group);
+        smoke.setOnAction(new EventHandler<ActionEvent>() {
+            @Override
+            public void handle(ActionEvent event) {
+                manualMaskValue = MaskedDataset.MANUAL_SMOKE;
+            }
+        });
+        types.getChildren().add(smoke);
 
         CheckBox showSetPixels = new CheckBox("Highlight manually set pixels");
         showSetPixels.selectedProperty().addListener(new ChangeListener<Boolean>() {

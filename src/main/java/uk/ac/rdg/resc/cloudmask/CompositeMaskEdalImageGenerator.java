@@ -28,7 +28,6 @@
 
 package uk.ac.rdg.resc.cloudmask;
 
-import java.awt.Color;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
 
@@ -46,9 +45,7 @@ import uk.ac.rdg.resc.edal.graphics.style.util.SimpleFeatureCatalogue;
 import uk.ac.rdg.resc.edal.metadata.GridVariableMetadata;
 import uk.ac.rdg.resc.edal.util.PlottingDomainParams;
 
-public class CompositeMaskEdalImageGenerator extends EdalImageGenerator {//implements ImageGenerator {
-    private Color maskColor = new Color(0, 0, 0, 0.75f);
-
+public class CompositeMaskEdalImageGenerator extends EdalImageGenerator {
     private final int xSize;
     private final int ySize;
     protected MapImage image;
@@ -59,7 +56,6 @@ public class CompositeMaskEdalImageGenerator extends EdalImageGenerator {//imple
     private RasterLayer manualLayer;
     private boolean manualShowing = false;
     private boolean isRgb = false;
-
 
     public CompositeMaskEdalImageGenerator(String var,
             SimpleFeatureCatalogue<MaskedDataset> catalogue) throws IOException, EdalException {
@@ -83,8 +79,8 @@ public class CompositeMaskEdalImageGenerator extends EdalImageGenerator {//imple
         image.getLayers().add(rasterLayer);
 
         thresholdLayer = new RasterLayer(CompositeMaskPlugin.COMPOSITEMASK,
-                new SegmentColourScheme(new ColourScale(0f, 1f, false), null, null, null,
-                        "#00000000," + GraphicsUtils.colourToString(maskColor), 4));
+                new SegmentColourScheme(new ColourScale(0f, 1.66f, false), null, null, null,
+                        "#00000000,#44000000,#88000000,#cc000000,#bb00ffff,#bbff00ff", 6));
         image.getLayers().add(thresholdLayer);
 
         manualLayer = new RasterLayer(MaskedDataset.MANUAL_MASK_NAME, new SegmentColourScheme(
@@ -116,7 +112,7 @@ public class CompositeMaskEdalImageGenerator extends EdalImageGenerator {//imple
         }
         image.getLayers().add(0, rasterLayer);
     }
-    
+
     public boolean isRgb() {
         return isRgb;
     }
@@ -138,7 +134,7 @@ public class CompositeMaskEdalImageGenerator extends EdalImageGenerator {//imple
                 false), null, null, null, palette, 250));
         image.getLayers().add(0, rasterLayer);
     }
-    
+
     public void showMaskedPixels(boolean show) {
         if (show && !manualShowing) {
             image.getLayers().add(manualLayer);

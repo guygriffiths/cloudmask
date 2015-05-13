@@ -269,6 +269,8 @@ public final class CloudMaskDatasetFactory extends DatasetFactory {
         public final static int MANUAL_PROBABLY_CLEAR = 1;
         public final static int MANUAL_PROBABLY_CLOUDY = 2;
         public final static int MANUAL_CLOUDY = 3;
+        public final static int MANUAL_DUST = 4;
+        public final static int MANUAL_SMOKE = 5;
 
         public final static String MASK_SUFFIX = "MASK";
         public final static String MEDIAN = "-median3x3";
@@ -325,7 +327,7 @@ public final class CloudMaskDatasetFactory extends DatasetFactory {
                                             MANUAL_MASK_NAME,
                                             "Manual mask",
                                             "Manually defined cloud mask",
-                                            "Missing - unset; 0 - clear; 0.33 - probably clear; 0.66 - probably cloud; 1.0 - cloud",
+                                            "0: clear; 1: probably clear; 2: probably cloudy; 3: cloudy; 4: dust; 5: smoke",
                                             ""), metadata.getHorizontalDomain(), metadata
                                             .getVerticalDomain(), metadata.getTemporalDomain(),
                                     true));
@@ -655,12 +657,12 @@ public final class CloudMaskDatasetFactory extends DatasetFactory {
                              */
                             for (int i = 0; i <= 2; i++) {
                                 for (int j = 0; j <= 2; j++) {
-                                    if(xmin == 0) {
+                                    if (xmin == 0) {
                                         index.setDim(1, x + i - 1);
                                     } else {
                                         index.setDim(1, x + i);
                                     }
-                                    if(ymin == 0) {
+                                    if (ymin == 0) {
                                         index.setDim(0, y + j - 1);
                                     } else {
                                         index.setDim(0, y + j);
@@ -781,9 +783,11 @@ public final class CloudMaskDatasetFactory extends DatasetFactory {
             if (newValue == null && oldValue != null) {
                 manualMask.set(newValue, y, x);
                 return true;
-            } else if (oldValue == null || (MANUAL_CLEAR == newValue && oldValue.intValue() != 0)
-                    || (MANUAL_CLOUDY == newValue && oldValue.intValue() != 1)
-                    || (MANUAL_PROBABLY_CLEAR == newValue) || (MANUAL_PROBABLY_CLOUDY == newValue)) {
+            } else if (oldValue == null
+                    || (MANUAL_CLEAR == newValue && oldValue.floatValue() != 0f)
+                    || (MANUAL_CLOUDY == newValue && oldValue.floatValue() != 1f)
+                    || (MANUAL_PROBABLY_CLEAR == newValue) || (MANUAL_PROBABLY_CLOUDY == newValue)
+                    || (MANUAL_DUST == newValue) || (MANUAL_SMOKE == newValue)) {
                 /*
                  * Only set cloudy / clear if this changes the composite mask
                  */
@@ -1116,7 +1120,8 @@ public final class CloudMaskDatasetFactory extends DatasetFactory {
             Array4D<Number> array4d = feature.getValues(varId);
 
             Variable variable;
-            if (metadata.getId().endsWith(MaskedDataset.MASK_SUFFIX)) {
+            if (metadata.getId().endsWith(MaskedDataset.MASK_SUFFIX)
+                    || metadata.getId().equals(MaskedDataset.MANUAL_MASK_NAME)) {
                 ArrayShort.D2 values = new ArrayShort.D2(ySize, xSize);
 
                 for (int y = 0; y < ySize; y++) {
@@ -1129,6 +1134,26 @@ public final class CloudMaskDatasetFactory extends DatasetFactory {
                     }
                 }
                 variable = fileWriter.addVariable(null, metadata.getId(), DataType.SHORT, dims);
+                dataToWrite.put(variable, values);
+            } else if (metadata.getId().equals(CompositeMaskPlugin.COMPOSITEMASK)) {
+                ArrayFloat.D2 values = new ArrayFloat.D2(ySize, xSize);
+
+                for (int y = 0; y < ySize; y++) {
+                    for (int x = 0; x < xSize; x++) {
+                        Number number = array4d.get(0, 0, y, x);
+                        if (number == null || number.floatValue() > 1f) {
+                            /*
+                             * Write unset values as NaNs, and remove aerosol
+                             * values from the composite mask (these are
+                             * included in the manual mask, but are not part of
+                             * the composite, which only applies to clouds)
+                             */
+                            number = Float.NaN;
+                        }
+                        values.set(y, x, number.floatValue());
+                    }
+                }
+                variable = fileWriter.addVariable(null, metadata.getId(), DataType.FLOAT, dims);
                 dataToWrite.put(variable, values);
             } else {
                 ArrayFloat.D2 values = new ArrayFloat.D2(ySize, xSize);
