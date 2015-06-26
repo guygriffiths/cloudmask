@@ -139,7 +139,7 @@ public class CloudMask extends Application {
         primaryStage.show();
         
 //        controller.loadDataset(new File("c:/Users/Guy/test_file.nc"));
-//        controller.loadDataset(new File("/home/guy/test_file.nc"));
+//        controller.loadDataset(new File("/home/guy/test_file.nc"));4
 //        controller.loadDataset(new File("/home/guy/Data/cloudmask.nc"));
     }
 }

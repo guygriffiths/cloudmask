@@ -56,7 +56,6 @@ import javafx.stage.Stage;
 
 import org.controlsfx.dialog.ExceptionDialog;
 
-import ucar.ma2.InvalidRangeException;
 import uk.ac.rdg.resc.cloudmask.CloudMaskDatasetFactory.MaskedDataset;
 import uk.ac.rdg.resc.edal.dataset.plugins.VariablePlugin;
 import uk.ac.rdg.resc.edal.domain.Extent;
@@ -239,8 +238,7 @@ public class CloudMaskController {
         try {
             CloudMaskDatasetFactory.writeDataset(activeDataset, selectedFile.getAbsolutePath());
             changedSinceLastSave = false;
-        } catch (VariableNotFoundException | DataReadingException | IOException
-                | InvalidRangeException e) {
+        } catch (Throwable e) {
             ExceptionDialog exceptionDialog = new ExceptionDialog(e);
             exceptionDialog.show();
         }

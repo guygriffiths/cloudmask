@@ -96,7 +96,6 @@ public class ColourbarSlider extends RangeSlider {
             }
         });
 
-
         setHighValue(getMax());
         setLowValue(getMin());
 
@@ -111,7 +110,7 @@ public class ColourbarSlider extends RangeSlider {
         updateValue();
 
         setShowTickMarks(true);
-        setShowTickLabels(false);
+        setShowTickLabels(true);
     }
 
     public void setImageGenerator(EdalImageGenerator imageGenerator) {
@@ -136,7 +135,7 @@ public class ColourbarSlider extends RangeSlider {
                 /*
                  * This gets the track and sets the background image on it
                  */
-                if (node.getClass() == StackPane.class) {
+                if (node.getStyleClass().contains("track")) {
                     ((StackPane) node).setBackground(new Background(new BackgroundImage(fxImage,
                             null, null, null, null)));
                 }

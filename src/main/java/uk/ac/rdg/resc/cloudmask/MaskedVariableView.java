@@ -133,12 +133,10 @@ public class MaskedVariableView extends HBox {
         colourbarSlider = new ColourbarSlider();
         colourbarSlider.setOrientation(Orientation.VERTICAL);
         
-        inclusiveThreshold = new CheckBox("Mask inside threshold");
-        includedInMask = new CheckBox("Included in composite");
+        inclusiveThreshold = new CheckBox("Mask inside");
+        includedInMask = new CheckBox("Included");
 
-        selectPalette = new Button("Choose colour palette");
-//        selectPalette = new Button("", new ImageView(new Image(getClass().getResourceAsStream(
-//                "/colours.png"))));
+        selectPalette = new Button("Choose palette");
 
         resetView = new Button("Reset");
 
@@ -225,7 +223,6 @@ public class MaskedVariableView extends HBox {
 
         settings.getChildren().add(maskValsExclusive);
         settings.getChildren().add(historyButtons);
-        VBox.setVgrow(variables, Priority.ALWAYS);
 
         getChildren().add(mapMask);
         getChildren().add(colourbarSlider);

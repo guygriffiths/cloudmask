@@ -30,6 +30,7 @@ package uk.ac.rdg.resc.cloudmask.widgets;
 
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
+import javafx.scene.Node;
 import javafx.scene.layout.Background;
 import javafx.scene.layout.BackgroundFill;
 import javafx.scene.layout.CornerRadii;
@@ -88,8 +89,9 @@ public class MaskRangeSlider extends RangeSlider {
                 setTickUnit();
             }
         });
+        setBackgrounds();
     }
-
+    
     public void setInclusive(boolean inclusive) {
         this.inclusive = inclusive;
         setBackgrounds();
@@ -107,10 +109,18 @@ public class MaskRangeSlider extends RangeSlider {
             outFill = new BackgroundFill(DARK_GRADIENT, new CornerRadii(5), null);
         }
 
-        ((StackPane) getChildren().get(1)).setBackground(new Background(outFill));
-        ((StackPane) getChildren().get(4)).setBackground(new Background(inFill));
+        for (Node node : getChildren()) {
+            if (node instanceof StackPane) {
+                if (node.getStyleClass().contains("track")) {
+                    ((StackPane) node).setBackground(new Background(outFill));
+                }
+                if (node.getStyleClass().contains("range-bar")) {
+                    ((StackPane) node).setBackground(new Background(inFill));
+                }
+            }
+        }
     }
-    
+
     private void setTickUnit() {
         double unit = (getMax() - getMin()) / 10.0;
         for (int i = -10;; i++) {

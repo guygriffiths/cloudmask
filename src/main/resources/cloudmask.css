@@ -8,7 +8,7 @@
 
 /* Padding on left to avoid overlap with image */
 .colourbar-slider {
-    -fx-padding: 8 0 8 0;
+    -fx-padding: 8 0 8 8;
 }
 
 /* Sets the slider tick marks to black */
@@ -21,14 +21,14 @@
 	-fx-tick-label-fill: black;
 }
 
-/* Determines the width of the colourbar */
-.colourbar-slider .track {
-	-fx-padding: 0.8em;
-}
-
 /* Determines the width of the threshold mask slider */
 .mask-slider .track {
 	-fx-padding: 0.6em;
+}
+
+/* Determines the width of the colourbar */
+.colourbar-slider .track {
+	-fx-padding: 0.8em;
 }
 
 /* Padding to ensure that labels on both ends of the scale don't go off screen */

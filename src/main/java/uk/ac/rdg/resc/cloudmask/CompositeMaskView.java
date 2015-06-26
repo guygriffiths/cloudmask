@@ -91,6 +91,7 @@ public class CompositeMaskView extends HBox {
 
     private Integer manualMaskValue = MaskedDataset.MANUAL_CLOUDY;
     private Label varLabel;
+    private CheckBox showSetPixels;
 
     public CompositeMaskView(int imageWidth, int imageHeight, double scale,
             CloudMaskController cloudMaskController) {
@@ -278,7 +279,7 @@ public class CompositeMaskView extends HBox {
         });
         types.getChildren().add(smoke);
 
-        CheckBox showSetPixels = new CheckBox("Highlight manually set pixels");
+        showSetPixels = new CheckBox("Highlight manually set pixels");
         showSetPixels.selectedProperty().addListener(new ChangeListener<Boolean>() {
             @Override
             public void changed(ObservableValue<? extends Boolean> observable, Boolean oldVal,
@@ -332,7 +333,7 @@ public class CompositeMaskView extends HBox {
 
         VBox widgets = new VBox(MaskedVariableView.WIDGET_SPACING);
         widgets.getChildren().add(varLabel);
-        HBox.setHgrow(variables, Priority.ALWAYS);
+
         widgets.getChildren().add(variables);
         widgets.getChildren().add(pixelType);
         widgets.getChildren().add(selectPalette);
@@ -350,7 +351,7 @@ public class CompositeMaskView extends HBox {
         }
         getChildren().add(colourbarSlider);
         getChildren().add(widgets);
-        HBox.setHgrow(colourbarSlider, Priority.NEVER);
+        HBox.setHgrow(colourbarSlider, null);
         HBox.setHgrow(widgets, Priority.ALWAYS);
     }
 
@@ -367,6 +368,8 @@ public class CompositeMaskView extends HBox {
         if (imageView != null) {
             getChildren().remove(imageView);
         }
+        
+        showSetPixels.setSelected(false);
 
         if (catalogue != null) {
             ObservableList<String> variableNames = catalogue.getDataset()
@@ -471,8 +474,7 @@ public class CompositeMaskView extends HBox {
         }
         imageView.setFitHeight(imageHeight * scale);
         imageView.setFitWidth(imageWidth * scale);
-
         getChildren().add(0, imageView);
-        HBox.setHgrow(imageView, Priority.NEVER);
+        HBox.setHgrow(imageView, null);
     }
 }

@@ -80,7 +80,7 @@ public class CompositeMaskEdalImageGenerator extends EdalImageGenerator {
 
         thresholdLayer = new RasterLayer(CompositeMaskPlugin.COMPOSITEMASK,
                 new SegmentColourScheme(new ColourScale(0f, 1.66f, false), null, null, null,
-                        "#00000000,#44000000,#88000000,#cc000000,#bb00ffff,#bbff00ff", 6));
+                        "#00000000,#44000000,#88000000,#cc000000,#bb0000ff,#bbff00ff", 6));
         image.getLayers().add(thresholdLayer);
 
         manualLayer = new RasterLayer(MaskedDataset.MANUAL_MASK_NAME, new SegmentColourScheme(

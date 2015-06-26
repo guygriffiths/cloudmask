@@ -1082,7 +1082,7 @@ public final class CloudMaskDatasetFactory extends DatasetFactory {
 
     public static void writeDataset(MaskedDataset dataset, String location) throws IOException,
             VariableNotFoundException, InvalidRangeException, DataReadingException {
-        NetcdfFileWriter fileWriter = NetcdfFileWriter.createNew(Version.netcdf4, location);
+        NetcdfFileWriter fileWriter = NetcdfFileWriter.createNew(Version.netcdf3, location);
 
         Set<String> outputVariables = new LinkedHashSet<>();
         outputVariables.addAll(dataset.getOriginalVariableNames());
@@ -1120,16 +1120,16 @@ public final class CloudMaskDatasetFactory extends DatasetFactory {
             Array4D<Number> array4d = feature.getValues(varId);
 
             Variable variable;
-            if (metadata.getId().endsWith(MaskedDataset.MASK_SUFFIX)
-                    || metadata.getId().equals(MaskedDataset.MANUAL_MASK_NAME)) {
+            if (metadata.getId().endsWith(MaskedDataset.MASK_SUFFIX)) {
                 ArrayShort.D2 values = new ArrayShort.D2(ySize, xSize);
 
                 for (int y = 0; y < ySize; y++) {
                     for (int x = 0; x < xSize; x++) {
+                        /*
+                         * Masks can not have missing values - they are either 0
+                         * or 1.
+                         */
                         Number number = array4d.get(0, 0, y, x);
-                        if (number == null) {
-                            number = Float.NaN;
-                        }
                         values.set(y, x, number.shortValue());
                     }
                 }
