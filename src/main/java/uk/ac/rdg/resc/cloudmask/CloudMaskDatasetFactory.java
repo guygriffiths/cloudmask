@@ -109,6 +109,8 @@ public final class CloudMaskDatasetFactory extends DatasetFactory {
 
     private Dimension yDimension;
 
+    /* Warnings about not closing nc were invalid - it gets closed by CdmUtils method */
+    @SuppressWarnings("resource")
     @Override
     public MaskedDataset createDataset(String id, String location) throws IOException,
             EdalException {
@@ -205,7 +207,8 @@ public final class CloudMaskDatasetFactory extends DatasetFactory {
 
                 Parameter parameter = new Parameter(varId, var.getShortName(),
                         var.getDescription(), var.getUnitsString(), name);
-                GridVariableMetadata metadata = new GridVariableMetadata(varId, parameter, hDomain,
+
+                GridVariableMetadata metadata = new GridVariableMetadata(parameter, hDomain,
                         zDomain, tDomain, true);
 
                 for (Attribute attr : var.getAttributes()) {
@@ -322,7 +325,6 @@ public final class CloudMaskDatasetFactory extends DatasetFactory {
             this.vars
                     .put(MANUAL_MASK_NAME,
                             new GridVariableMetadata(
-                                    MANUAL_MASK_NAME,
                                     new Parameter(
                                             MANUAL_MASK_NAME,
                                             "Manual mask",
@@ -414,12 +416,10 @@ public final class CloudMaskDatasetFactory extends DatasetFactory {
                 try {
                     GridVariableMetadata variableMetadata = (GridVariableMetadata) getVariableMetadata(variable);
                     Parameter p = variableMetadata.getParameter();
-                    VariableMetadata newMetadata = new GridVariableMetadata(variable + MEDIAN,
-                            new Parameter(variable + MEDIAN, "Median of " + p.getTitle(),
-                                    "Median of (" + p.getDescription()
-                                            + ") over a 3x3 moving window", p.getUnits(), p
-                                            .getStandardName()),
-                            variableMetadata.getHorizontalDomain(),
+                    VariableMetadata newMetadata = new GridVariableMetadata(new Parameter(variable
+                            + MEDIAN, "Median of " + p.getTitle(), "Median of ("
+                            + p.getDescription() + ") over a 3x3 moving window", p.getUnits(),
+                            p.getStandardName()), variableMetadata.getHorizontalDomain(),
                             variableMetadata.getVerticalDomain(),
                             variableMetadata.getTemporalDomain(), true);
                     vars.put(variable + MEDIAN, newMetadata);
@@ -447,12 +447,10 @@ public final class CloudMaskDatasetFactory extends DatasetFactory {
                 try {
                     GridVariableMetadata variableMetadata = (GridVariableMetadata) getVariableMetadata(variable);
                     Parameter p = variableMetadata.getParameter();
-                    VariableMetadata newMetadata = new GridVariableMetadata(variable + STDDEV,
-                            new Parameter(variable + STDDEV, "Stddev of " + p.getTitle(),
-                                    "Standard deviation of (" + p.getDescription()
-                                            + ") over a 3x3 moving window", p.getUnits(), p
-                                            .getStandardName()),
-                            variableMetadata.getHorizontalDomain(),
+                    VariableMetadata newMetadata = new GridVariableMetadata(new Parameter(variable
+                            + STDDEV, "Stddev of " + p.getTitle(), "Standard deviation of ("
+                            + p.getDescription() + ") over a 3x3 moving window", p.getUnits(),
+                            p.getStandardName()), variableMetadata.getHorizontalDomain(),
                             variableMetadata.getVerticalDomain(),
                             variableMetadata.getTemporalDomain(), true);
                     vars.put(variable + STDDEV, newMetadata);

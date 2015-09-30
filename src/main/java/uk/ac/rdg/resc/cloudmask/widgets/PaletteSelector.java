@@ -39,8 +39,8 @@ import javafx.scene.control.Dialog;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.HBox;
 import javafx.util.Callback;
-import uk.ac.rdg.resc.edal.graphics.style.ColourScale;
 import uk.ac.rdg.resc.edal.graphics.style.ColourScheme;
+import uk.ac.rdg.resc.edal.graphics.style.ScaleRange;
 import uk.ac.rdg.resc.edal.graphics.style.SegmentColourScheme;
 import uk.ac.rdg.resc.edal.graphics.style.util.ColourPalette;
 
@@ -57,7 +57,7 @@ public class PaletteSelector extends Dialog<String> {
         
         Set<String> palettesList = ColourPalette.getPredefinedPalettes();
         for(String pal : palettesList) {
-            ColourScheme cs = new SegmentColourScheme(new ColourScale(0f, 1f, false), null, null, null, pal, 250);
+            ColourScheme cs = new SegmentColourScheme(new ScaleRange(0f, 1f, false), null, null, null, pal, 250);
             ImageView paletteImage = new ImageView(SwingFXUtils.toFXImage(
                     cs.getScaleBar(20, 250, 0, true, false, null, null), null));
             Button button = new Button("", paletteImage);

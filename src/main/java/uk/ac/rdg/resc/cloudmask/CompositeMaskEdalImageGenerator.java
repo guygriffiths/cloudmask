@@ -35,10 +35,10 @@ import uk.ac.rdg.resc.cloudmask.CloudMaskDatasetFactory.MaskedDataset;
 import uk.ac.rdg.resc.edal.domain.Extent;
 import uk.ac.rdg.resc.edal.exceptions.EdalException;
 import uk.ac.rdg.resc.edal.geometry.BoundingBoxImpl;
-import uk.ac.rdg.resc.edal.graphics.style.ColourScale;
 import uk.ac.rdg.resc.edal.graphics.style.MapImage;
 import uk.ac.rdg.resc.edal.graphics.style.RGBColourScheme;
 import uk.ac.rdg.resc.edal.graphics.style.RasterLayer;
+import uk.ac.rdg.resc.edal.graphics.style.ScaleRange;
 import uk.ac.rdg.resc.edal.graphics.style.SegmentColourScheme;
 import uk.ac.rdg.resc.edal.graphics.style.util.GraphicsUtils;
 import uk.ac.rdg.resc.edal.graphics.style.util.SimpleFeatureCatalogue;
@@ -73,18 +73,18 @@ public class CompositeMaskEdalImageGenerator extends EdalImageGenerator {
         this.catalogue = catalogue;
         this.scaleRange = scaleRange;
         this.palette = "seq-cubeYF";
-        rasterLayer = new RasterLayer(var, new SegmentColourScheme(new ColourScale(scaleRange,
+        rasterLayer = new RasterLayer(var, new SegmentColourScheme(new ScaleRange(scaleRange,
                 false), null, null, null, palette, 250));
         image = new MapImage();
         image.getLayers().add(rasterLayer);
 
         thresholdLayer = new RasterLayer(CompositeMaskPlugin.COMPOSITEMASK,
-                new SegmentColourScheme(new ColourScale(0f, 1.66f, false), null, null, null,
+                new SegmentColourScheme(new ScaleRange(0f, 1.66f, false), null, null, null,
                         "#00000000,#44000000,#88000000,#cc000000,#bb0000ff,#bbff00ff", 6));
         image.getLayers().add(thresholdLayer);
 
         manualLayer = new RasterLayer(MaskedDataset.MANUAL_MASK_NAME, new SegmentColourScheme(
-                new ColourScale(100f, 101f, false), null, null, null, "#aaff0000", 1));
+                new ScaleRange(100f, 101f, false), null, null, null, "#aaff0000", 1));
     }
 
     public void setVariable(String var) throws EdalException {
@@ -106,7 +106,7 @@ public class CompositeMaskEdalImageGenerator extends EdalImageGenerator {
             rasterLayer = new RasterLayer(var, new RGBColourScheme());
             isRgb = true;
         } else {
-            rasterLayer = new RasterLayer(var, new SegmentColourScheme(new ColourScale(scaleRange,
+            rasterLayer = new RasterLayer(var, new SegmentColourScheme(new ScaleRange(scaleRange,
                     false), null, null, null, palette, 250));
             isRgb = false;
         }
@@ -121,7 +121,7 @@ public class CompositeMaskEdalImageGenerator extends EdalImageGenerator {
     public void setPalette(String palette) {
         this.palette = palette;
         image.getLayers().remove(0);
-        rasterLayer = new RasterLayer(varName, new SegmentColourScheme(new ColourScale(scaleRange,
+        rasterLayer = new RasterLayer(varName, new SegmentColourScheme(new ScaleRange(scaleRange,
                 false), null, null, null, palette, 250));
         image.getLayers().add(0, rasterLayer);
     }
@@ -130,7 +130,7 @@ public class CompositeMaskEdalImageGenerator extends EdalImageGenerator {
     public void setScaleRange(Extent<Float> scaleRange) {
         this.scaleRange = scaleRange;
         image.getLayers().remove(0);
-        rasterLayer = new RasterLayer(varName, new SegmentColourScheme(new ColourScale(scaleRange,
+        rasterLayer = new RasterLayer(varName, new SegmentColourScheme(new ScaleRange(scaleRange,
                 false), null, null, null, palette, 250));
         image.getLayers().add(0, rasterLayer);
     }

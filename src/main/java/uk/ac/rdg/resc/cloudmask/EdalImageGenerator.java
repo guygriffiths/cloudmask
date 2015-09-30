@@ -38,11 +38,11 @@ import uk.ac.rdg.resc.edal.domain.Extent;
 import uk.ac.rdg.resc.edal.exceptions.EdalException;
 import uk.ac.rdg.resc.edal.exceptions.VariableNotFoundException;
 import uk.ac.rdg.resc.edal.geometry.BoundingBoxImpl;
-import uk.ac.rdg.resc.edal.graphics.style.ColourScale;
 import uk.ac.rdg.resc.edal.graphics.style.ColourScheme;
 import uk.ac.rdg.resc.edal.graphics.style.MapImage;
 import uk.ac.rdg.resc.edal.graphics.style.RGBColourScheme;
 import uk.ac.rdg.resc.edal.graphics.style.RasterLayer;
+import uk.ac.rdg.resc.edal.graphics.style.ScaleRange;
 import uk.ac.rdg.resc.edal.graphics.style.SegmentColourScheme;
 import uk.ac.rdg.resc.edal.graphics.style.util.GraphicsUtils;
 import uk.ac.rdg.resc.edal.graphics.style.util.SimpleFeatureCatalogue;
@@ -91,7 +91,7 @@ public class EdalImageGenerator implements ImageGenerator {
             colourScheme = new RGBColourScheme();
             rgb = true;
         } else {
-            colourScheme = new SegmentColourScheme(new ColourScale(scaleRange, false), null, null,
+            colourScheme = new SegmentColourScheme(new ScaleRange(scaleRange, false), null, null,
                     null, palette, 250);
         }
         rasterLayer = new RasterLayer(var, colourScheme);
@@ -99,7 +99,7 @@ public class EdalImageGenerator implements ImageGenerator {
         image.getLayers().add(rasterLayer);
 
         thresholdLayer = new RasterLayer(var + "-" + MaskedDataset.MASK_SUFFIX,
-                new SegmentColourScheme(new ColourScale(0f, 1f, false), null, null, null,
+                new SegmentColourScheme(new ScaleRange(0f, 1f, false), null, null, null,
                         "#00000000," + GraphicsUtils.colourToString(maskColor), 2));
         image.getLayers().add(thresholdLayer);
 
@@ -124,7 +124,7 @@ public class EdalImageGenerator implements ImageGenerator {
         if (rgb) {
             colourScheme = new RGBColourScheme();
         } else {
-            colourScheme = new SegmentColourScheme(new ColourScale(scaleRange, false), null, null,
+            colourScheme = new SegmentColourScheme(new ScaleRange(scaleRange, false), null, null,
                     null, palette, 250);
         }
         rasterLayer.setColourScheme(colourScheme);
@@ -187,7 +187,7 @@ public class EdalImageGenerator implements ImageGenerator {
         if (value > 1)
             value = 1f;
         maskColor = new Color(0f, 0f, 0f, value);
-        thresholdLayer.setColourScheme(new SegmentColourScheme(new ColourScale(0f, 1f, false),
+        thresholdLayer.setColourScheme(new SegmentColourScheme(new ScaleRange(0f, 1f, false),
                 null, null, null, "#00000000," + GraphicsUtils.colourToString(maskColor), 2));
     }
 

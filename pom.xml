@@ -17,7 +17,7 @@
         <!-- Enables auto-insertion of licence in new source code files. 
             Could be extracted to a separate settings file, as per http://mevenide.codehaus.org/m2-site/mevenide2-netbeans/customizations.html -->
         <netbeans.hint.license>bsd-3clause</netbeans.hint.license>
-        <edal-version>1.0-rc1</edal-version>
+        <edal-version>1.0.2</edal-version>
     </properties>
 
     <url>https://github.com/guygriffiths/cloudmask</url>
@@ -177,7 +177,7 @@
         <dependency>
             <groupId>org.controlsfx</groupId>
             <artifactId>controlsfx</artifactId>
-            <version>8.20.8</version>
+            <version>8.40.10-SNAPSHOT</version>
         </dependency>
     </dependencies>
     <scm>
@@ -185,10 +185,10 @@
         <developerConnection>scm:git:ssh://github.com/guygriffiths/cloudmask</developerConnection>
         <url>https://github.com/guygriffiths/cloudmask</url>
     </scm>
-<!--     <repositories> -->
-<!--         <repository> -->
-<!--             <id>edal-snapshots</id> -->
-<!--             <url>https://oss.sonatype.org/content/repositories/snapshots</url> -->
-<!--         </repository> -->
-<!--     </repositories> -->
+    <repositories>
+        <repository>
+            <id>edal-snapshots</id>
+            <url>https://oss.sonatype.org/content/repositories/snapshots</url>
+        </repository>
+    </repositories>
 </project>
