@@ -7,3 +7,4 @@ target/
 *.log
 .h2/
 
+/target/
