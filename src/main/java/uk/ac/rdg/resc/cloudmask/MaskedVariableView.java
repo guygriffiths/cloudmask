@@ -62,7 +62,7 @@ import uk.ac.rdg.resc.cloudmask.widgets.PaletteSelector;
 import uk.ac.rdg.resc.cloudmask.widgets.ZoomableImageView.ImageGenerator;
 import uk.ac.rdg.resc.edal.domain.Extent;
 import uk.ac.rdg.resc.edal.exceptions.VariableNotFoundException;
-import uk.ac.rdg.resc.edal.graphics.style.util.GraphicsUtils;
+import uk.ac.rdg.resc.edal.graphics.utils.GraphicsUtils;
 import uk.ac.rdg.resc.edal.metadata.VariableMetadata;
 
 public class MaskedVariableView extends HBox {

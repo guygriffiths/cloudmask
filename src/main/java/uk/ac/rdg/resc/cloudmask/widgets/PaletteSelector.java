@@ -42,7 +42,7 @@ import javafx.util.Callback;
 import uk.ac.rdg.resc.edal.graphics.style.ColourScheme;
 import uk.ac.rdg.resc.edal.graphics.style.ScaleRange;
 import uk.ac.rdg.resc.edal.graphics.style.SegmentColourScheme;
-import uk.ac.rdg.resc.edal.graphics.style.util.ColourPalette;
+import uk.ac.rdg.resc.edal.graphics.utils.ColourPalette;
 
 public class PaletteSelector extends Dialog<String> {
     private HBox palettes;

@@ -44,10 +44,10 @@ import uk.ac.rdg.resc.edal.graphics.style.RGBColourScheme;
 import uk.ac.rdg.resc.edal.graphics.style.RasterLayer;
 import uk.ac.rdg.resc.edal.graphics.style.ScaleRange;
 import uk.ac.rdg.resc.edal.graphics.style.SegmentColourScheme;
-import uk.ac.rdg.resc.edal.graphics.style.util.GraphicsUtils;
-import uk.ac.rdg.resc.edal.graphics.style.util.SimpleFeatureCatalogue;
+import uk.ac.rdg.resc.edal.graphics.utils.GraphicsUtils;
+import uk.ac.rdg.resc.edal.graphics.utils.PlottingDomainParams;
+import uk.ac.rdg.resc.edal.graphics.utils.SimpleFeatureCatalogue;
 import uk.ac.rdg.resc.edal.metadata.GridVariableMetadata;
-import uk.ac.rdg.resc.edal.util.PlottingDomainParams;
 
 public class EdalImageGenerator implements ImageGenerator {
     /*
@@ -56,7 +56,7 @@ public class EdalImageGenerator implements ImageGenerator {
     private Color maskColor = new Color(0, 0, 0, 0.75f);
 
     protected String varName;
-    protected final SimpleFeatureCatalogue<MaskedDataset> catalogue;
+    protected SimpleFeatureCatalogue<MaskedDataset> catalogue;
 
     private final int xSize;
     private final int ySize;

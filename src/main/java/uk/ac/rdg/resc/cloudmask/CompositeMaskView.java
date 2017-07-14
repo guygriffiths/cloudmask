@@ -67,7 +67,7 @@ import uk.ac.rdg.resc.cloudmask.widgets.PaletteSelector;
 import uk.ac.rdg.resc.cloudmask.widgets.ZoomableImageView.ImageGenerator;
 import uk.ac.rdg.resc.edal.domain.Extent;
 import uk.ac.rdg.resc.edal.exceptions.EdalException;
-import uk.ac.rdg.resc.edal.graphics.style.util.SimpleFeatureCatalogue;
+import uk.ac.rdg.resc.edal.graphics.utils.SimpleFeatureCatalogue;
 import uk.ac.rdg.resc.edal.grid.HorizontalGrid;
 import uk.ac.rdg.resc.edal.position.HorizontalPosition;
 import uk.ac.rdg.resc.edal.util.Extents;

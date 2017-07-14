@@ -31,7 +31,7 @@ package uk.ac.rdg.resc.cloudmask.widgets;
 import java.awt.image.BufferedImage;
 
 import uk.ac.rdg.resc.cloudmask.widgets.ZoomableImageView.ImageGenerator;
-import uk.ac.rdg.resc.edal.graphics.style.util.ColourPalette;
+import uk.ac.rdg.resc.edal.graphics.utils.ColourPalette;
 
 public class JuliaImageGenerator implements ImageGenerator {
     

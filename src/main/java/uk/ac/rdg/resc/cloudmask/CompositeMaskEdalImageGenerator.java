@@ -40,17 +40,14 @@ import uk.ac.rdg.resc.edal.graphics.style.RGBColourScheme;
 import uk.ac.rdg.resc.edal.graphics.style.RasterLayer;
 import uk.ac.rdg.resc.edal.graphics.style.ScaleRange;
 import uk.ac.rdg.resc.edal.graphics.style.SegmentColourScheme;
-import uk.ac.rdg.resc.edal.graphics.style.util.GraphicsUtils;
-import uk.ac.rdg.resc.edal.graphics.style.util.SimpleFeatureCatalogue;
+import uk.ac.rdg.resc.edal.graphics.utils.GraphicsUtils;
+import uk.ac.rdg.resc.edal.graphics.utils.PlottingDomainParams;
+import uk.ac.rdg.resc.edal.graphics.utils.SimpleFeatureCatalogue;
 import uk.ac.rdg.resc.edal.metadata.GridVariableMetadata;
-import uk.ac.rdg.resc.edal.util.PlottingDomainParams;
 
 public class CompositeMaskEdalImageGenerator extends EdalImageGenerator {
     private final int xSize;
     private final int ySize;
-    protected MapImage image;
-    protected SimpleFeatureCatalogue<MaskedDataset> catalogue;
-    protected Extent<Float> scaleRange;
     private String palette;
 
     private RasterLayer manualLayer;

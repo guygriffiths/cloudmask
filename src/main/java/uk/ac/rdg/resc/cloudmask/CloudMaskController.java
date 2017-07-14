@@ -62,7 +62,7 @@ import uk.ac.rdg.resc.edal.domain.Extent;
 import uk.ac.rdg.resc.edal.exceptions.DataReadingException;
 import uk.ac.rdg.resc.edal.exceptions.EdalException;
 import uk.ac.rdg.resc.edal.exceptions.VariableNotFoundException;
-import uk.ac.rdg.resc.edal.graphics.style.util.SimpleFeatureCatalogue;
+import uk.ac.rdg.resc.edal.graphics.utils.SimpleFeatureCatalogue;
 import uk.ac.rdg.resc.edal.position.HorizontalPosition;
 import uk.ac.rdg.resc.edal.util.Extents;
 import uk.ac.rdg.resc.edal.util.GridCoordinates2D;
@@ -152,7 +152,7 @@ public class CloudMaskController {
          */
         CloudMaskDatasetFactory mdf = new CloudMaskDatasetFactory();
         activeDataset = mdf.createDataset(datasetLocation.getName(),
-                datasetLocation.getAbsolutePath());
+                datasetLocation.getAbsolutePath(), false);
         catalogue = new SimpleFeatureCatalogue<>(activeDataset, true);
         ObservableList<String> unmaskedVariables = activeDataset.getUnmaskedVariableNames();
 
@@ -498,7 +498,7 @@ public class CloudMaskController {
                     "You have modified settings since last save.  Really quit?", ButtonType.OK,
                     ButtonType.CANCEL);
             Optional<ButtonType> showAndWait = saveWarning.showAndWait();
-            if(showAndWait.isPresent() && showAndWait.get() == ButtonType.OK) {
+            if (showAndWait.isPresent() && showAndWait.get() == ButtonType.OK) {
                 mainStage.close();
             }
         }

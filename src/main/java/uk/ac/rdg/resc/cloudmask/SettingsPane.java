@@ -51,7 +51,7 @@ import uk.ac.rdg.resc.cloudmask.CloudMaskDatasetFactory.MaskedDataset;
 import uk.ac.rdg.resc.edal.dataset.plugins.DifferencePlugin;
 import uk.ac.rdg.resc.edal.dataset.plugins.NormalisedDifferencePlugin;
 import uk.ac.rdg.resc.edal.exceptions.EdalException;
-import uk.ac.rdg.resc.edal.graphics.style.util.GraphicsUtils;
+import uk.ac.rdg.resc.edal.graphics.utils.GraphicsUtils;
 
 public class SettingsPane extends TitledPane {
     private VBox content;
