@@ -99,7 +99,6 @@ public final class CloudMaskDatasetFactory extends DatasetFactory {
     private Dimension yDimension;
     
     /* Warnings about not closing nc were invalid - it gets closed by CdmUtils method */
-    @SuppressWarnings("resource")
     @Override
     public MaskedDataset createDataset(String id, String location, boolean forceRefresh) throws IOException,
             EdalException {
@@ -144,8 +143,8 @@ public final class CloudMaskDatasetFactory extends DatasetFactory {
                     Array data = var.read();
                     Index index = data.getIndex();
                     int[] shape = data.getShape();
-                    int xSize = shape[0];
-                    int ySize = shape[1];
+                    int xSize = shape[1];
+                    int ySize = shape[0];
                     values = new ValuesArray2D(ySize, xSize);
                     for (int i = 0; i < xSize; i++) {
                         for (int j = 0; j < ySize; j++) {
