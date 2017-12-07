@@ -2,12 +2,9 @@
 <!-- Top-level POM for Java-CSML library -->
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
     xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
-    <!-- We inherit from oss-parent so we can deploy to sonatype.org -->
-    <!-- <parent> <groupId>org.sonatype.oss</groupId> <artifactId>oss-parent</artifactId> 
-        <version>7</version> </parent> -->
     <modelVersion>4.0.0</modelVersion>
     <groupId>uk.ac.rdg.resc</groupId>
-    <version>1.0</version>
+    <version>1.1</version>
     <artifactId>cloudmask</artifactId>
     <name>Cloud Masker</name>
     <packaging>jar</packaging>
@@ -17,15 +14,15 @@
         <!-- Enables auto-insertion of licence in new source code files. 
             Could be extracted to a separate settings file, as per http://mevenide.codehaus.org/m2-site/mevenide2-netbeans/customizations.html -->
         <netbeans.hint.license>bsd-3clause</netbeans.hint.license>
-        <edal-version>1.2.8</edal-version>
+        <edal-version>1.2.12</edal-version>
     </properties>
 
     <url>https://github.com/guygriffiths/cloudmask</url>
     <inceptionYear>2014</inceptionYear>
     <description>Cloud Masker is a piece of software to allow researchers to combine channels from NetCDF datasets in various ways so as to accurately manually determine which pixels from satellite imagery are clouds</description>
     <organization>
-        <name>Reading e-Science Centre, University of Reading, UK</name>
-        <url>http://www.met.reading.ac.uk/~resc-web/home/</url>
+        <name>Institute for Environmental Analytics, University of Reading, UK</name>
+        <url>http://the-iea.org</url>
     </organization>
     <licenses>
         <license>
@@ -39,9 +36,9 @@
     <developers>
         <developer>
             <name>Guy Griffiths</name>
-            <organization>Reading e-Science Centre, University of Reading, UK</organization>
-            <organizationUrl>http://www.met.reading.ac.uk/~resc-web/home/</organizationUrl>
-            <email>guy.griffiths@reading.ac.uk</email>
+            <organization>Institute for Environmental Analytics, University of Reading, UK</organization>
+            <organizationUrl>http://the-iea.org/</organizationUrl>
+            <email>guy.griffiths@the-iea.org</email>
         </developer>
     </developers>
     <build>
@@ -190,10 +187,4 @@
         <developerConnection>scm:git:ssh://github.com/guygriffiths/cloudmask</developerConnection>
         <url>https://github.com/guygriffiths/cloudmask</url>
     </scm>
-    <repositories>
-        <repository>
-            <id>edal-snapshots</id>
-            <url>https://oss.sonatype.org/content/repositories/snapshots</url>
-        </repository>
-    </repositories>
 </project>
