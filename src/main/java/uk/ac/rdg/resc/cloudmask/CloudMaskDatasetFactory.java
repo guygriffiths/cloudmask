@@ -254,6 +254,7 @@ public final class CloudMaskDatasetFactory extends DatasetFactory {
      *
      * @author Guy Griffiths
      */
+    @SuppressWarnings("serial")
     public final class MaskedDataset extends GriddedDataset {
         public final static String MANUAL_MASK_NAME = "manual-cloudmask";
         public final static int MANUAL_CLEAR = 0;
