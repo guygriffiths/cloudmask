@@ -403,7 +403,7 @@ public final class CloudMaskDatasetFactory extends DatasetFactory {
             }
             if (unmaskedVariables.contains(variable)) {
                 try {
-                    GridVariableMetadata variableMetadata = (GridVariableMetadata) getVariableMetadata(variable);
+                    GridVariableMetadata variableMetadata = getVariableMetadata(variable);
                     Parameter p = variableMetadata.getParameter();
                     VariableMetadata newMetadata = new GridVariableMetadata(new Parameter(variable
                             + MEDIAN, "Median of " + p.getTitle(), "Median of ("
@@ -434,7 +434,7 @@ public final class CloudMaskDatasetFactory extends DatasetFactory {
             }
             if (unmaskedVariables.contains(variable)) {
                 try {
-                    GridVariableMetadata variableMetadata = (GridVariableMetadata) getVariableMetadata(variable);
+                    GridVariableMetadata variableMetadata = getVariableMetadata(variable);
                     Parameter p = variableMetadata.getParameter();
                     VariableMetadata newMetadata = new GridVariableMetadata(new Parameter(variable
                             + STDDEV, "Stddev of " + p.getTitle(), "Standard deviation of ("
@@ -918,7 +918,7 @@ public final class CloudMaskDatasetFactory extends DatasetFactory {
         boolean firstVar = true;
         ArrayList<Dimension> dims = null;
         for (String varId : outputVariables) {
-            GridVariableMetadata metadata = (GridVariableMetadata) dataset
+            GridVariableMetadata metadata = dataset
                     .getVariableMetadata(varId);
             int xSize = metadata.getHorizontalDomain().getXSize();
             int ySize = metadata.getHorizontalDomain().getYSize();

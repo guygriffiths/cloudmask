@@ -378,7 +378,7 @@ public class CompositeMaskView extends HBox {
                 throw new EdalException("No variables are present.");
             }
 
-            HorizontalGrid maskGrid = (HorizontalGrid) catalogue.getDataset()
+            HorizontalGrid maskGrid = catalogue.getDataset()
                     .getVariableMetadata(MaskedDataset.MANUAL_MASK_NAME).getHorizontalDomain();
 
             imageGenerator = new CompositeMaskEdalImageGenerator(variableNames.get(0), catalogue);

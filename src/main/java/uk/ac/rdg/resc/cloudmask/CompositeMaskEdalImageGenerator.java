@@ -63,7 +63,7 @@ public class CompositeMaskEdalImageGenerator extends EdalImageGenerator {
             SimpleFeatureCatalogue<MaskedDataset> catalogue, Extent<Float> scaleRange)
             throws IOException, EdalException {
         super(var, catalogue);
-        GridVariableMetadata variableMetadata = (GridVariableMetadata) catalogue.getDataset()
+        GridVariableMetadata variableMetadata = catalogue.getDataset()
                 .getVariableMetadata(var);
         xSize = variableMetadata.getHorizontalDomain().getXSize();
         ySize = variableMetadata.getHorizontalDomain().getYSize();
@@ -89,7 +89,7 @@ public class CompositeMaskEdalImageGenerator extends EdalImageGenerator {
     }
 
     public void setVariable(String var, Extent<Float> scaleRange) throws EdalException {
-        GridVariableMetadata variableMetadata = (GridVariableMetadata) catalogue.getDataset()
+        GridVariableMetadata variableMetadata = catalogue.getDataset()
                 .getVariableMetadata(var);
         if (xSize != variableMetadata.getHorizontalDomain().getXSize()
                 || ySize != variableMetadata.getHorizontalDomain().getYSize()) {

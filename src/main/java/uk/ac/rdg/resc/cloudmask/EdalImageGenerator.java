@@ -78,7 +78,7 @@ public class EdalImageGenerator implements ImageGenerator {
 
     public EdalImageGenerator(String var, SimpleFeatureCatalogue<MaskedDataset> catalogue,
             Extent<Float> scaleRange) throws IOException, EdalException {
-        GridVariableMetadata variableMetadata = (GridVariableMetadata) catalogue.getDataset()
+        GridVariableMetadata variableMetadata = catalogue.getDataset()
                 .getVariableMetadata(var);
         xSize = variableMetadata.getHorizontalDomain().getXSize();
         ySize = variableMetadata.getHorizontalDomain().getYSize();
